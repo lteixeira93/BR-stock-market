@@ -32,6 +32,7 @@ class WebDriver:
         response = requests.get(self.__url, headers=self.__header)
         stock_list = pd.read_html(response.text, decimal=',', thousands='.')
         stocks_data_frame = pd.DataFrame(stock_list[1])
+        stocks_data_frame = StockFilter().filter_dataframe(stocks_data_frame)
         self.apply_stocks_filter(stocks_data_frame)
 
     @staticmethod
@@ -49,8 +50,6 @@ class WebDriver:
         -------
         None.
         """
-        stocks_data_frame = StockFilter().filter_dataframe(stocks_data_frame)
-
         # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$ - Filter Ok
         stocks_data_frame.sort_values(by=['Financial_Volume_(%)'], inplace=True)
         stocks_data_frame.drop(stocks_data_frame[stocks_data_frame['Financial_Volume_(%)'] < 1_000_000].index,
