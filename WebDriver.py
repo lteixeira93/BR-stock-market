@@ -1,8 +1,7 @@
+from typing import List
+
 import pandas as pd
 import requests
-
-from StockFilter import StockFilter
-from utils.helper import print_full_dataframe
 
 
 class WebDriver:
@@ -21,44 +20,15 @@ class WebDriver:
             "X-Requested-With": self.__url_request_type
         }
 
-    def get_stocks_table(self) -> None:
+    def get_stocks_table(self) -> List:
         r"""
-        Get HTML stock tables into a DataFrame object.
+        Get and convert stocks table from HTML into a `DataFrame` object.
 
-        Returns
+        Return
         -------
-        None.
+        `List` of DataFrames
         """
         response = requests.get(self.__url, headers=self.__header)
-        stock_list = pd.read_html(response.text, decimal=',', thousands='.')
-        stocks_data_frame = pd.DataFrame(stock_list[1])
-        stocks_data_frame = StockFilter().filter_dataframe(stocks_data_frame)
-        self.apply_stocks_filter(stocks_data_frame)
+        stocks_list = pd.read_html(response.text, decimal=',', thousands='.')
 
-    @staticmethod
-    def apply_stocks_filter(stocks_data_frame) -> None:
-        r"""
-        Filter stock tables list of DataFrame objects based on:
-        Stock                    object
-        Price                   float64
-        EBIT_Margin_(%)         float64
-        EV_EBIT                   int32
-        Dividend_Yield_(%)      float64
-        Financial_Volume_(%)      int32
-
-        Returns
-        -------
-        None.
-        """
-        # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$ - Filter Ok
-        stocks_data_frame.sort_values(by=['Financial_Volume_(%)'], inplace=True)
-        stocks_data_frame.drop(stocks_data_frame[stocks_data_frame['Financial_Volume_(%)'] < 1_000_000].index,
-                               inplace=True)
-
-        # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
-        stocks_data_frame.sort_values(by=['EBIT_Margin_(%)'], inplace=True)
-        stocks_data_frame.drop(stocks_data_frame[stocks_data_frame['EBIT_Margin_(%)'] < 0].index, inplace=True)
-
-        # Third filter: Sort from the cheapest to expensive stocks EV_EBIT
-        stocks_data_frame.sort_values(by=['EV_EBIT'], inplace=True)
-        print_full_dataframe(stocks_data_frame)
+        return stocks_list
