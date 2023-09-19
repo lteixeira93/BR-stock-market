@@ -2,32 +2,10 @@ from typing import List
 
 import pandas as pd
 
+from WebStockFilter import WebStockFilter
 
-class StockFilter:
-    @staticmethod
-    def apply_financial_filters(stocks_data_frame) -> pd.DataFrame:
-        r"""
-        Filter stock tables `List` of `DataFrame` objects based on:
-        `Stock`, `Price`, `EBIT_Margin_(%)`, `EV_EBIT`, `Dividend_Yield_(%)`, `Financial_Volume_(%)`
 
-        Return
-        -------
-        Pandas `DataFrame`
-        """
-        # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$ - Filter Ok
-        stocks_data_frame.sort_values(by=['Financial_Volume_(%)'], inplace=True)
-        stocks_data_frame.drop(stocks_data_frame[stocks_data_frame['Financial_Volume_(%)'] < 1_000_000].index,
-                               inplace=True)
-
-        # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
-        stocks_data_frame.sort_values(by=['EBIT_Margin_(%)'], inplace=True)
-        stocks_data_frame.drop(stocks_data_frame[stocks_data_frame['EBIT_Margin_(%)'] < 0].index, inplace=True)
-
-        # Third filter: Sort from the cheapest to expensive stocks EV_EBIT
-        stocks_data_frame.sort_values(by=['EV_EBIT'], inplace=True)
-
-        return stocks_data_frame
-
+class LocalStockFilter:
     @staticmethod
     def prepare_dataframe(stocks_list: List) -> pd.DataFrame:
         r"""
@@ -88,5 +66,37 @@ class StockFilter:
 
         # Replaces NaN with 0, retain int part and convert it to integer
         stocks_data_frame.fillna(0, inplace=True)
+
+        return stocks_data_frame
+
+    @staticmethod
+    def apply_financial_filters(stocks_data_frame: pd.DataFrame) -> pd.DataFrame:
+        r"""
+        Filter stock tables `List` of `DataFrame` objects based on:
+        `Stock`, `Price`, `EBIT_Margin_(%)`, `EV_EBIT`, `Dividend_Yield_(%)`, `Financial_Volume_(%)`
+
+        Return
+        -------
+        Pandas `DataFrame`
+        """
+        # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$ - Filter Ok
+        stocks_data_frame.sort_values(by=['Financial_Volume_(%)'], inplace=True)
+        stocks_data_frame.drop(stocks_data_frame[stocks_data_frame['Financial_Volume_(%)'] < 1_000_000].index,
+                               inplace=True)
+
+        # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
+        stocks_data_frame.sort_values(by=['EBIT_Margin_(%)'], inplace=True)
+        stocks_data_frame.drop(stocks_data_frame[stocks_data_frame['EBIT_Margin_(%)'] < 0].index, inplace=True)
+
+        # Third filter: Sort from the cheapest to expensive stocks EV_EBIT
+        stocks_data_frame.sort_values(by=['EV_EBIT'], inplace=True)
+
+        # Fourth filter: Remove stocks from the same company with less Financial_Volume_(%) # TODO
+        companies_stock_name_list = list(stocks_data_frame['Stock'])
+
+        # Fifth filter: Remove stocks in bankruptcy
+        companies_stock_name_list = WebStockFilter().check_bankruptcy(companies_stock_name_list)
+
+        print(companies_stock_name_list)
 
         return stocks_data_frame
