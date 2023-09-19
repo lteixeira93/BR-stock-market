@@ -2,10 +2,11 @@ from typing import List
 
 import pandas as pd
 
+from LocalFilter import LocalFilter
 from WebStockFilter import WebStockFilter
 
 
-class LocalStockFilter:
+class LocalStockFilter(LocalFilter):
     @staticmethod
     def prepare_dataframe(stocks_list: List) -> pd.DataFrame:
         r"""
@@ -38,7 +39,7 @@ class LocalStockFilter:
         stocks_data_frame.dropna(subset=['EBIT_Margin_(%)', 'EV_EBIT'], inplace=True)
 
         # Replaces NaN with 0, retain int part and convert it to integer
-        stocks_data_frame.fillna(0, inplace=True)
+        stocks_data_frame.fillna(value=0, inplace=True)
 
         # Wipe out invalid characters to manipulate the data
         stocks_data_frame['Price'] = stocks_data_frame['Price'].astype(str).astype(float)
@@ -65,7 +66,7 @@ class LocalStockFilter:
                                                      .replace('.', '').astype(float).astype(int))
 
         # Replaces NaN with 0, retain int part and convert it to integer
-        stocks_data_frame.fillna(0, inplace=True)
+        stocks_data_frame.fillna(value=0, inplace=True)
 
         return stocks_data_frame
 
@@ -92,11 +93,11 @@ class LocalStockFilter:
         stocks_data_frame.sort_values(by=['EV_EBIT'], inplace=True)
 
         # Fourth filter: Remove stocks from the same company with less Financial_Volume_(%) # TODO
-        companies_stock_name_list = list(stocks_data_frame['Stock'])
 
         # Fifth filter: Remove stocks in bankruptcy
+        companies_stock_name_list = list(stocks_data_frame['Stock'])
         companies_stock_name_list = WebStockFilter().check_bankruptcy(companies_stock_name_list)
-
         print(companies_stock_name_list)
+        stocks_data_frame = stocks_data_frame[~stocks_data_frame.Stock.isin(companies_stock_name_list)]
 
         return stocks_data_frame
