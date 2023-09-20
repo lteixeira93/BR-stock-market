@@ -9,7 +9,7 @@ from WebDriver import WebDriver
 class WebStockFilter(WebDriver):
     def __init__(self) -> None:
         super().__init__()
-        self.__stock_bankruptcy_status: str = 'FASE OPERACIONAL'  # 'EM RECUPERAÇÃO JUDICIAL OU EQUIVALENTE'
+        self.__stock_bankruptcy_status: str = 'FASE OPERACIONAL'
         self.__bankruptcy_text_xpath: str = '//*[@id="tabela_resumo_empresa"]/tbody/tr[4]/td[2]'
         self.__companies_stock_link_list_dummy = [self.indicators_partial_url + 'GOAU4',
                                                   self.indicators_partial_url + 'ETER3']
