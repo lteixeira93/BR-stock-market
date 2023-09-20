@@ -27,7 +27,7 @@ class WebDriver:
 
         Return
         -------
-        `List` of DataFrames
+        `List` of `DataFrames`
         """
         try:
             response = requests.get(self.__url, headers=self.header)
