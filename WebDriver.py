@@ -9,8 +9,9 @@ from selenium.webdriver.chrome.options import Options
 
 
 class WebDriver:
-    def __init__(self) -> None:
-        self.indicators_partial_url: str = 'https://www.investsite.com.br/principais_indicadores.php?cod_negociacao='
+    def __init__(
+            self
+    ) -> None:
         self.__url: str = 'https://shorturl.at/hrGHQ'
         self.__user_agent: str = ('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
                                   'Chrome/50.0.2661.75 Safari/537.36')
@@ -23,8 +24,11 @@ class WebDriver:
         self.__chrome_options.add_argument("--headless")
         self.__chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
         self.driver = webdriver.Chrome(options=self.__chrome_options)
+    # end def
 
-    def get_stocks_table(self) -> List:
+    def get_stocks_table(
+            self
+    ) -> List:
         r"""
         Get and convert stocks table from HTML into a `List`.
 
@@ -48,3 +52,4 @@ class WebDriver:
                     progress.update(task1, advance=30)
 
         return stocks_list
+    # end def

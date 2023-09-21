@@ -1,9 +1,11 @@
+import multiprocessing
 import time
 from collections import Counter
 from typing import List
 
 import numpy as np
 import pandas as pd
+from linetimer import CodeTimer
 from rich.progress import Progress
 
 from LocalFilter import LocalFilter
@@ -11,8 +13,14 @@ from WebStockFilter import WebStockFilter
 
 
 class LocalStockFilter(LocalFilter):
+    def __init__(self):
+        self.__indicators_partial_url: str = 'https://www.investsite.com.br/principais_indicadores.php?cod_negociacao='
+    # end def
+
     @staticmethod
-    def prepare_dataframe(stocks_list: List) -> pd.DataFrame:
+    def prepare_dataframe(
+            stocks_list: List
+    ) -> pd.DataFrame:
         r"""
         Get `List` of `DataFrame`, convert to `DataFrame`, remove unused fields, wipe out data to be processed.
 
@@ -87,7 +95,10 @@ class LocalStockFilter(LocalFilter):
 
         return stocks_data_frame
 
-    def apply_financial_filters(self, stocks_data_frame: pd.DataFrame) -> pd.DataFrame:
+    def apply_financial_filters(
+            self,
+            stocks_data_frame: pd.DataFrame
+    ) -> pd.DataFrame:
         r"""
         Filter stock tables `List` of `DataFrame` objects based on:
         `Stock`, `Price`, `EBIT_Margin_(%)`, `EV_EBIT`, `Dividend_Yield_(%)`, `Financial_Volume_(%)`
@@ -117,14 +128,18 @@ class LocalStockFilter(LocalFilter):
                 progress.update(task1, advance=40)
 
                 # Fifth filter: Remove stocks in bankruptcy
-                stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
+                with CodeTimer("drop stocks in bankruptcy"):
+                    stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
                 time.sleep(0.5)
                 progress.update(task1, advance=20)
 
         return stocks_data_frame.head(20)
 
     @staticmethod
-    def drop_low_financial_volume(stocks_data_frame: pd.DataFrame, financial_volume=0) -> pd.DataFrame:
+    def drop_low_financial_volume(
+            stocks_data_frame: pd.DataFrame,
+            financial_volume=0
+    ) -> pd.DataFrame:
         r"""
         Gets `stocks_data_frame` and drop all Financial_Volume_(%) less than financial_volume.
 
@@ -139,7 +154,9 @@ class LocalStockFilter(LocalFilter):
         return stocks_data_frame
 
     @staticmethod
-    def drop_negative_profit_stocks(stocks_data_frame: pd.DataFrame) -> pd.DataFrame:
+    def drop_negative_profit_stocks(
+            stocks_data_frame: pd.DataFrame
+    ) -> pd.DataFrame:
         r"""
         Gets `stocks_data_frame` and drop companies with negative or zero profit EBIT_Margin_(%).
 
@@ -153,7 +170,10 @@ class LocalStockFilter(LocalFilter):
         return stocks_data_frame
 
     @staticmethod
-    def sort_by_ev_ebit(stocks_data_frame: pd.DataFrame, by='EV_EBIT') -> pd.DataFrame:
+    def sort_by_ev_ebit(
+            stocks_data_frame: pd.DataFrame,
+            by='EV_EBIT'
+    ) -> pd.DataFrame:
         r"""
         Gets `stocks_data_frame` and sort from the cheapest to expensive stocks EV_EBIT.
 
@@ -166,7 +186,9 @@ class LocalStockFilter(LocalFilter):
         return stocks_data_frame
 
     @staticmethod
-    def drop_duplicated_stocks_by_financial_volume(stocks_data_frame: pd.DataFrame) -> pd.DataFrame:
+    def drop_duplicated_stocks_by_financial_volume(
+            stocks_data_frame: pd.DataFrame
+    ) -> pd.DataFrame:
         r"""
         Gets `stocks_data_frame` and remove stocks from the same company with less Financial_Volume_(%).
 
@@ -220,8 +242,10 @@ class LocalStockFilter(LocalFilter):
         stocks_data_frame.reset_index(drop=True, inplace=True)
         return stocks_data_frame
 
-    @staticmethod
-    def drop_stocks_in_bankruptcy(stocks_data_frame: pd.DataFrame) -> pd.DataFrame:
+    def drop_stocks_in_bankruptcy(
+            self,
+            stocks_data_frame: pd.DataFrame
+    ) -> pd.DataFrame:
         r"""
         Gets `stocks_data_frame` and drop stocks in bankruptcy.
 
@@ -230,7 +254,41 @@ class LocalStockFilter(LocalFilter):
         Pandas `DataFrame`
         """
         companies_stock_name_list = list(stocks_data_frame['Stock'])
-        companies_stock_name_list = WebStockFilter().check_bankruptcy(companies_stock_name_list)
+
+        # Creating list of links in format:
+        # <INDICATORS_LINK> + <STOCK_NAME>
+        companies_stock_link_list = [self.__indicators_partial_url + stock_check_link
+                                     for stock_check_link in companies_stock_name_list]
+
+        number_of_cores = multiprocessing.cpu_count()
+        print(f"Initializing analysis with {number_of_cores} cores.")
+        threads = []
+
+        for current_core in range(1, number_of_cores + 1):
+            # Dividing companies_stock_link_list for each current_core to optimize requests
+            first_half_per_core = int(len(companies_stock_link_list) * (current_core - 1) / number_of_cores)
+            second_half_per_core = int(len(companies_stock_link_list) * current_core / number_of_cores)
+
+            print(f"Core {current_core} processing from {first_half_per_core} to {second_half_per_core}")
+            threads.append(
+                multiprocessing.Process(
+                    target=WebStockFilter().check_bankruptcy,
+                    args=(
+                        companies_stock_link_list,
+                        first_half_per_core,
+                        second_half_per_core
+                    ),
+                    daemon=True
+                )
+            )
+            break
+
+        print(threads)
+        threads[0].start()
+        threads[0].join()
+        # [th.start() for th in threads]
+        # [th.join() for th in threads]
+        exit()
         stocks_data_frame = stocks_data_frame[~stocks_data_frame.Stock.isin(companies_stock_name_list)]
 
         return stocks_data_frame
