@@ -1,7 +1,9 @@
+import time
 from typing import List
 
 import pandas as pd
 import requests
+from rich.progress import Progress
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
@@ -19,6 +21,7 @@ class WebDriver:
         }
         self.__chrome_options = Options()
         self.__chrome_options.add_argument("--headless")
+        self.__chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
         self.driver = webdriver.Chrome(options=self.__chrome_options)
 
     def get_stocks_table(self) -> List:
@@ -29,11 +32,19 @@ class WebDriver:
         -------
         `List` of `DataFrames`
         """
-        try:
-            response = requests.get(self.__url, headers=self.header)
-        except requests.exceptions.RequestException as e:
-            raise SystemExit(e)
-        else:
-            stocks_list = pd.read_html(response.text, decimal=',', thousands='.')
+        with Progress() as progress:
+            task1 = progress.add_task("[green]Getting indicators:        ", total=100)
+
+            while not progress.finished:
+                progress.update(task1, advance=20)
+                try:
+                    response = requests.get(self.__url, headers=self.header)
+                    progress.update(task1, advance=50)
+                    time.sleep(0.5)
+                except requests.exceptions.RequestException as e:
+                    raise SystemExit(e)
+                else:
+                    stocks_list = pd.read_html(response.text, decimal=',', thousands='.')
+                    progress.update(task1, advance=30)
 
         return stocks_list

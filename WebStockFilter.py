@@ -27,18 +27,16 @@ class WebStockFilter(WebDriver):
         companies_stock_link_list = [self.indicators_partial_url + stock_check_link
                                      for stock_check_link in companies_stock_name_list]
 
-        print(f'Running bankruptcy analysis on:\n{companies_stock_name_list}')
         for company_stock_link in companies_stock_link_list:
             try:
-                print(company_stock_link)
                 self.driver.get(company_stock_link)
                 bankruptcy_situation = self.driver.find_element(By.XPATH, self.__bankruptcy_text_xpath)
             except NoSuchElementException:
                 raise NoSuchElementException
             else:
                 if self.__stock_bankruptcy_status not in bankruptcy_situation.text:
-                    print(f"Found {company_stock_link[len(self.indicators_partial_url):]} in bankruptcy to be removed "
-                          "from selected stocks.")
+                    # print(f"Found {company_stock_link[len(self.indicators_partial_url):]} in bankruptcy to be removed "
+                    #       "from selected stocks.")
                     companies_in_bankruptcy_list.append(company_stock_link[len(self.indicators_partial_url):])
 
         return companies_in_bankruptcy_list

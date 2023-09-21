@@ -1,8 +1,10 @@
+import time
 from collections import Counter
 from typing import List
 
 import numpy as np
 import pandas as pd
+from rich.progress import Progress
 
 from LocalFilter import LocalFilter
 from WebStockFilter import WebStockFilter
@@ -18,57 +20,70 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        stocks_data_frame = pd.DataFrame(stocks_list[1])
+        with Progress() as progress:
+            task1 = progress.add_task("[green]Preparing fetched data:    ", total=100)
 
-        drop_columns_list = [
-            'Empresa', 'Data Preço', 'Data Dem.Financ.', 'Consolidação', 'ROTanC', 'ROInvC', 'RPL', 'ROA',
-            'Margem Líquida', 'Margem Bruta',
-            'Giro Ativo', 'Alav.Financ.', 'Passivo/PL', 'Preço/Lucro', 'Preço/VPA', 'Preço/Rec.Líq.', 'Preço/FCO',
-            'Preço/FCF', 'Preço/EBIT',
-            'Preço/NCAV', 'Preço/Ativo Total', 'Preço/Cap.Giro', 'EV/EBITDA', 'EV/Rec.Líq.', 'EV/FCF', 'EV/FCO',
-            'EV/Ativo Total',
-            'Market Cap(R$)', '# Ações Total', '# Ações Ord.', '# Ações Pref.'
-        ]
+            while not progress.finished:
+                stocks_data_frame = pd.DataFrame(stocks_list[1])
 
-        # Drop unused columns, rename remaining columns
-        stocks_data_frame.drop(columns=drop_columns_list, inplace=True)
-        stocks_data_frame.rename(columns={'Ação': 'Stock', 'Preço': 'Price', 'Margem EBIT': 'EBIT_Margin_(%)',
-                                          'EV/EBIT': 'EV_EBIT', 'Div.Yield': 'Dividend_Yield_(%)',
-                                          'Volume Financ.(R$)': 'Financial_Volume_(%)'},
-                                 inplace=True)
+                drop_columns_list = [
+                    'Empresa', 'Data Preço', 'Data Dem.Financ.', 'Consolidação', 'ROTanC', 'ROInvC', 'RPL', 'ROA',
+                    'Margem Líquida', 'Margem Bruta',
+                    'Giro Ativo', 'Alav.Financ.', 'Passivo/PL', 'Preço/Lucro', 'Preço/VPA', 'Preço/Rec.Líq.', 'Preço/FCO',
+                    'Preço/FCF', 'Preço/EBIT',
+                    'Preço/NCAV', 'Preço/Ativo Total', 'Preço/Cap.Giro', 'EV/EBITDA', 'EV/Rec.Líq.', 'EV/FCF', 'EV/FCO',
+                    'EV/Ativo Total',
+                    'Market Cap(R$)', '# Ações Total', '# Ações Ord.', '# Ações Pref.'
+                ]
 
-        # Drop NaNs on EBIT_Margin_(%)
-        stocks_data_frame.dropna(subset=['EBIT_Margin_(%)', 'EV_EBIT'], inplace=True)
+                # Drop unused columns, rename remaining columns
+                stocks_data_frame.drop(columns=drop_columns_list, inplace=True)
+                stocks_data_frame.rename(columns={'Ação': 'Stock', 'Preço': 'Price', 'Margem EBIT': 'EBIT_Margin_(%)',
+                                                  'EV/EBIT': 'EV_EBIT', 'Div.Yield': 'Dividend_Yield_(%)',
+                                                  'Volume Financ.(R$)': 'Financial_Volume_(%)'},
+                                         inplace=True)
+                time.sleep(0.5)
+                progress.update(task1, advance=20)
 
-        # Replaces NaN with 0, retain int part and convert it to integer
-        stocks_data_frame.fillna(value=0, inplace=True)
+                # Drop NaNs on EBIT_Margin_(%)
+                stocks_data_frame.dropna(subset=['EBIT_Margin_(%)', 'EV_EBIT'], inplace=True)
 
-        # Wipe out invalid characters to manipulate the data
-        stocks_data_frame['Price'] = stocks_data_frame['Price'].astype(str).astype(float)
-        stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].str.rstrip('%')
-        stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace('.', '')
+                # Replaces NaN with 0, retain int part and convert it to integer
+                stocks_data_frame.fillna(value=0, inplace=True)
 
-        stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).str.replace(',', '')
+                time.sleep(0.5)
+                progress.update(task1, advance=20)
 
-        stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].str.rstrip('%')
-        stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].astype(str).str.replace('.',
-                                                                                                                  '')
+                # Wipe out invalid characters to manipulate the data
+                stocks_data_frame['Price'] = stocks_data_frame['Price'].astype(str).astype(float)
+                stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].str.rstrip('%')
+                stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace('.', '')
 
-        # Removing characters (,.) and convert string numbers to int and float properly
-        stocks_data_frame['EBIT_Margin_(%)'] = (stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace(',', '.')
-                                                .astype(float))
+                stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).str.replace(',', '')
 
-        stocks_data_frame['Dividend_Yield_(%)'] = (
-            stocks_data_frame['Dividend_Yield_(%)'].astype(str).str.replace(',', '.')
-            .astype(float))
+                stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].str.rstrip('%')
+                stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].astype(str).str.replace('.',
+                                                                                                                          '')
+                time.sleep(0.5)
+                progress.update(task1, advance=20)
 
-        stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).astype(float)
+                # Removing characters (,.) and convert string numbers to int and float properly
+                stocks_data_frame['EBIT_Margin_(%)'] = (stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace(',', '.')
+                                                        .astype(float))
 
-        stocks_data_frame['Financial_Volume_(%)'] = (stocks_data_frame['Financial_Volume_(%)'].astype(str).str
-                                                     .replace('.', '').astype(float).astype(int))
+                stocks_data_frame['Dividend_Yield_(%)'] = (
+                    stocks_data_frame['Dividend_Yield_(%)'].astype(str).str.replace(',', '.')
+                    .astype(float))
 
-        # Replaces NaN with 0, retain int part and convert it to integer
-        stocks_data_frame.fillna(value=0, inplace=True)
+                stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).astype(float)
+
+                stocks_data_frame['Financial_Volume_(%)'] = (stocks_data_frame['Financial_Volume_(%)'].astype(str).str
+                                                             .replace('.', '').astype(float).astype(int))
+
+                # Replaces NaN with 0, retain int part and convert it to integer
+                stocks_data_frame.fillna(value=0, inplace=True)
+                time.sleep(0.5)
+                progress.update(task1, advance=40)
 
         return stocks_data_frame
 
@@ -81,20 +96,30 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$
-        stocks_data_frame = self.drop_low_financial_volume(stocks_data_frame, 1_000_000)
+        with Progress() as progress:
+            task1 = progress.add_task("[green]Applying financial filters:", total=100)
 
-        # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
-        stocks_data_frame = self.drop_negative_profit_stocks(stocks_data_frame)
+            while not progress.finished:
+                # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$
+                stocks_data_frame = self.drop_low_financial_volume(stocks_data_frame, 1_000_000)
 
-        # Third filter: Sort from the cheapest to expensive stocks EV_EBIT
-        stocks_data_frame = self.sort_by_ev_ebit(stocks_data_frame)
+                # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
+                stocks_data_frame = self.drop_negative_profit_stocks(stocks_data_frame)
+                time.sleep(0.5)
+                progress.update(task1, advance=40)
 
-        # Fourth filter: Remove stocks from the same company with less Financial_Volume_(%)
-        stocks_data_frame = self.drop_duplicated_stocks_by_financial_volume(stocks_data_frame)
+                # Third filter: Sort from the cheapest to expensive stocks EV_EBIT
+                stocks_data_frame = self.sort_by_ev_ebit(stocks_data_frame)
 
-        # Fifth filter: Remove stocks in bankruptcy
-        stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
+                # Fourth filter: Remove stocks from the same company with less Financial_Volume_(%)
+                stocks_data_frame = self.drop_duplicated_stocks_by_financial_volume(stocks_data_frame)
+                time.sleep(0.5)
+                progress.update(task1, advance=40)
+
+                # Fifth filter: Remove stocks in bankruptcy
+                stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
+                time.sleep(0.5)
+                progress.update(task1, advance=20)
 
         return stocks_data_frame.head(20)
 
@@ -206,7 +231,6 @@ class LocalStockFilter(LocalFilter):
         """
         companies_stock_name_list = list(stocks_data_frame['Stock'])
         companies_stock_name_list = WebStockFilter().check_bankruptcy(companies_stock_name_list)
-        print(companies_stock_name_list)
         stocks_data_frame = stocks_data_frame[~stocks_data_frame.Stock.isin(companies_stock_name_list)]
 
         return stocks_data_frame
