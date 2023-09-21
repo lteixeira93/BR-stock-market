@@ -24,6 +24,9 @@ The quickest way to get started with the tool is cloning this repo and running t
 user@admin:~$ python3 main.py
 ```
 
+![br-stock-gif](docs/br_stock_usage.gif)
+
+
 This will open the CLI tool and generate the stocks.
 The indicators used for the analysis are:
 
