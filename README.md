@@ -8,7 +8,7 @@ The tool is a CLI app developed to web scrap financial indicators and generate t
 Twenty stocks per month are a reasonable number to diversify your stocks' wallet.
 An .xlsx file is generated at the end with the stocks.
 
-## Create executable
+## Creating executable
 
 You can clone this repository and generate executable with pyinstaller.
 
