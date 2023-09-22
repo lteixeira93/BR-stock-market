@@ -1,4 +1,5 @@
-import multiprocessing
+import os
+import threading
 import time
 from collections import Counter
 from typing import List
@@ -8,6 +9,7 @@ import pandas as pd
 from linetimer import CodeTimer
 from rich.progress import Progress
 
+import settings
 from LocalFilter import LocalFilter
 from WebStockFilter import WebStockFilter
 
@@ -15,6 +17,7 @@ from WebStockFilter import WebStockFilter
 class LocalStockFilter(LocalFilter):
     def __init__(self):
         self.__indicators_partial_url: str = 'https://www.investsite.com.br/principais_indicadores.php?cod_negociacao='
+
     # end def
 
     @staticmethod
@@ -37,7 +40,8 @@ class LocalStockFilter(LocalFilter):
                 drop_columns_list = [
                     'Empresa', 'Data Preço', 'Data Dem.Financ.', 'Consolidação', 'ROTanC', 'ROInvC', 'RPL', 'ROA',
                     'Margem Líquida', 'Margem Bruta',
-                    'Giro Ativo', 'Alav.Financ.', 'Passivo/PL', 'Preço/Lucro', 'Preço/VPA', 'Preço/Rec.Líq.', 'Preço/FCO',
+                    'Giro Ativo', 'Alav.Financ.', 'Passivo/PL', 'Preço/Lucro', 'Preço/VPA', 'Preço/Rec.Líq.',
+                    'Preço/FCO',
                     'Preço/FCF', 'Preço/EBIT',
                     'Preço/NCAV', 'Preço/Ativo Total', 'Preço/Cap.Giro', 'EV/EBITDA', 'EV/Rec.Líq.', 'EV/FCF', 'EV/FCO',
                     'EV/Ativo Total',
@@ -65,19 +69,22 @@ class LocalStockFilter(LocalFilter):
                 # Wipe out invalid characters to manipulate the data
                 stocks_data_frame['Price'] = stocks_data_frame['Price'].astype(str).astype(float)
                 stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].str.rstrip('%')
-                stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace('.', '')
+                stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace('.',
+                                                                                                                    '')
 
                 stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).str.replace(',', '')
 
                 stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].str.rstrip('%')
-                stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].astype(str).str.replace('.',
-                                                                                                                          '')
+                stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].astype(
+                    str).str.replace('.',
+                                     '')
                 time.sleep(0.5)
                 progress.update(task1, advance=20)
 
                 # Removing characters (,.) and convert string numbers to int and float properly
-                stocks_data_frame['EBIT_Margin_(%)'] = (stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace(',', '.')
-                                                        .astype(float))
+                stocks_data_frame['EBIT_Margin_(%)'] = (
+                    stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace(',', '.')
+                    .astype(float))
 
                 stocks_data_frame['Dividend_Yield_(%)'] = (
                     stocks_data_frame['Dividend_Yield_(%)'].astype(str).str.replace(',', '.')
@@ -111,27 +118,29 @@ class LocalStockFilter(LocalFilter):
             task1 = progress.add_task("[green]Applying financial filters:", total=100)
 
             while not progress.finished:
-                # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$
-                stocks_data_frame = self.drop_low_financial_volume(stocks_data_frame, 1_000_000)
+                if not settings.PICKLE_DATAFRAME:
+                    # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$
+                    stocks_data_frame = self.drop_low_financial_volume(stocks_data_frame, 1_000_000)
 
-                # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
-                stocks_data_frame = self.drop_negative_profit_stocks(stocks_data_frame)
-                time.sleep(0.5)
-                progress.update(task1, advance=40)
+                    # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
+                    stocks_data_frame = self.drop_negative_profit_stocks(stocks_data_frame)
+                    time.sleep(0.5)
+                    progress.update(task1, advance=40)
 
-                # Third filter: Sort from the cheapest to expensive stocks EV_EBIT
-                stocks_data_frame = self.sort_by_ev_ebit(stocks_data_frame)
+                    # Third filter: Sort from the cheapest to expensive stocks EV_EBIT
+                    stocks_data_frame = self.sort_by_ev_ebit(stocks_data_frame)
 
-                # Fourth filter: Remove stocks from the same company with less Financial_Volume_(%)
-                stocks_data_frame = self.drop_duplicated_stocks_by_financial_volume(stocks_data_frame)
-                time.sleep(0.5)
-                progress.update(task1, advance=40)
+                    # Fourth filter: Remove stocks from the same company with less Financial_Volume_(%)
+                    stocks_data_frame = self.drop_duplicated_stocks_by_financial_volume(stocks_data_frame)
+                    time.sleep(0.5)
+                    progress.update(task1, advance=40)
 
                 # Fifth filter: Remove stocks in bankruptcy
                 with CodeTimer("drop stocks in bankruptcy"):
                     stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
                 time.sleep(0.5)
                 progress.update(task1, advance=20)
+                break
 
         return stocks_data_frame.head(20)
 
@@ -253,42 +262,55 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        companies_stock_name_list = list(stocks_data_frame['Stock'])
+        if settings.STORE_PICLE:
+            # Stores dataframe on disk and exits.
+            stocks_data_frame.to_pickle(settings.PICKLE_FILEPATH)
+            exit()
 
-        # Creating list of links in format:
-        # <INDICATORS_LINK> + <STOCK_NAME>
+        if settings.PICKLE_DATAFRAME:
+            # Reads from picle to speed up loading dataframe.
+            if os.path.exists(settings.PICKLE_FILEPATH):
+                stocks_data_frame = pd.read_pickle(settings.PICKLE_FILEPATH)
+            else:
+                print("Pickle file not found, set STORE_PICLE as True")
+                exit()
+
+        companies_stock_name_list = list(stocks_data_frame['Stock'])
         companies_stock_link_list = [self.__indicators_partial_url + stock_check_link
                                      for stock_check_link in companies_stock_name_list]
 
-        number_of_cores = multiprocessing.cpu_count()
-        print(f"Initializing analysis with {number_of_cores} cores.")
+        # Creating list of links in format:
+        # <INDICATORS_LINK> + <STOCK_NAME>
+        number_of_threads = 2
+        if settings.DEBUG_THREADS:
+            print(f"Initializing analysis with {number_of_threads} cores, each core with "
+                  f"{int(len(companies_stock_link_list) / number_of_threads)} tasks")
         threads = []
 
-        for current_core in range(1, number_of_cores + 1):
-            # Dividing companies_stock_link_list for each current_core to optimize requests
-            first_half_per_core = int(len(companies_stock_link_list) * (current_core - 1) / number_of_cores)
-            second_half_per_core = int(len(companies_stock_link_list) * current_core / number_of_cores)
+        # Sharing data between processes that can be serialized.
+        for current_thread in range(1, number_of_threads + 1):
+            # Dividing companies_stock_link_list for each current_thread to optimize requests
+            first_half_per_core = int(len(companies_stock_link_list) * (current_thread - 1) / number_of_threads)
+            second_half_per_core = int(len(companies_stock_link_list) * current_thread / number_of_threads)
 
-            print(f"Core {current_core} processing from {first_half_per_core} to {second_half_per_core}")
+            if settings.DEBUG_THREADS:
+                print(f"Core {current_thread} processing from {first_half_per_core} to {second_half_per_core}")
+
             threads.append(
-                multiprocessing.Process(
+                threading.Thread(
                     target=WebStockFilter().check_bankruptcy,
-                    args=(
-                        companies_stock_link_list,
-                        first_half_per_core,
-                        second_half_per_core
-                    ),
+                    kwargs={
+                        'companies_stock_link_list': companies_stock_link_list,
+                        'first_half_per_core': first_half_per_core,
+                        'second_half_per_core': second_half_per_core
+                    },
                     daemon=True
-                )
+                ),
             )
-            break
 
-        print(threads)
-        threads[0].start()
-        threads[0].join()
-        # [th.start() for th in threads]
-        # [th.join() for th in threads]
-        exit()
+        [th.start() for th in threads]
+        [th.join() for th in threads]
+
         stocks_data_frame = stocks_data_frame[~stocks_data_frame.Stock.isin(companies_stock_name_list)]
 
         return stocks_data_frame

@@ -19,7 +19,7 @@ class WebStockFilter(WebDriver):
             companies_stock_link_list: List,
             first_half_per_core: int,
             second_half_per_core: int
-    ):# -> List:
+    ) -> List:
         r"""
         Gets `List` of local-filtered stocks and do `multiprocessing` web analysis using bankruptcy indicators
         for each stock.
@@ -38,9 +38,8 @@ class WebStockFilter(WebDriver):
                 raise NoSuchElementException
             else:
                 if self.__stock_bankruptcy_status not in bankruptcy_situation.text:
-                    print(f"Found {company_stock_link[-4:]} in bankruptcy to be removed "
+                    print(f"Found {company_stock_link[-5:]} in bankruptcy to be removed "
                           f"from selected stocks.")
-                    companies_in_bankruptcy_list.append(company_stock_link[-4:])
+                    companies_in_bankruptcy_list.append(company_stock_link[-5:])
 
-        print(companies_in_bankruptcy_list)
-        # return companies_in_bankruptcy_list
+        return companies_in_bankruptcy_list

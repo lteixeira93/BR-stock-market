@@ -2,6 +2,7 @@ from datetime import date
 
 import pandas as pd
 
+import settings
 from FileManager import FileManager
 
 
@@ -15,7 +16,7 @@ class FileManagerXLSX(FileManager):
     def __init__(
             self
     ) -> None:
-        self.__filename = str(date.today())+'-most_valuables_BR_stocks.xlsx'
+        self.__filename = str(date.today())+settings.XLSX_FILENAME
     # end def
 
     def store_on_disk(
