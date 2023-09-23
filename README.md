@@ -13,7 +13,7 @@ An .xlsx file is generated at the end with the stocks.
 You can clone this repository and generate executable with pyinstaller.
 
 ```console
-user@admin:~$ pyinstaller --onefile --noconsole --uac-admin -n most_valuable_stocks .\main.py
+user@admin:~$ pyinstaller --onefile --noconsole -n most_valuable_stocks .\main.py
 ```
 
 ## Getting Started

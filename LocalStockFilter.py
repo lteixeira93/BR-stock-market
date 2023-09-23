@@ -6,7 +6,6 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from linetimer import CodeTimer
 from rich.progress import Progress
 
 import settings
@@ -136,8 +135,7 @@ class LocalStockFilter(LocalFilter):
                     progress.update(task1, advance=40)
 
                 # Fifth filter: Remove stocks in bankruptcy
-                with CodeTimer("drop stocks in bankruptcy"):
-                    stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
+                stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
                 time.sleep(0.5)
                 progress.update(task1, advance=20)
                 break
@@ -281,17 +279,20 @@ class LocalStockFilter(LocalFilter):
 
         # Creating list of links in format:
         # <INDICATORS_LINK> + <STOCK_NAME>
-        number_of_threads = 2
+        number_of_threads = 4
         if settings.DEBUG_THREADS:
             print(f"Initializing analysis with {number_of_threads} cores, each core with "
                   f"{int(len(companies_stock_link_list) / number_of_threads)} tasks")
         threads = []
+        next_first_half_chunk = 0
+        companies_in_bankruptcy_list = []
 
         # Sharing data between processes that can be serialized.
         for current_thread in range(1, number_of_threads + 1):
             # Dividing companies_stock_link_list for each current_thread to optimize requests
-            first_half_per_core = int(len(companies_stock_link_list) * (current_thread - 1) / number_of_threads)
+            first_half_per_core = next_first_half_chunk
             second_half_per_core = int(len(companies_stock_link_list) * current_thread / number_of_threads)
+            next_first_half_chunk = second_half_per_core + 1
 
             if settings.DEBUG_THREADS:
                 print(f"Core {current_thread} processing from {first_half_per_core} to {second_half_per_core}")
@@ -301,6 +302,7 @@ class LocalStockFilter(LocalFilter):
                     target=WebStockFilter().check_bankruptcy,
                     kwargs={
                         'companies_stock_link_list': companies_stock_link_list,
+                        'companies_in_bankruptcy_list': companies_in_bankruptcy_list,
                         'first_half_per_core': first_half_per_core,
                         'second_half_per_core': second_half_per_core
                     },
@@ -311,6 +313,6 @@ class LocalStockFilter(LocalFilter):
         [th.start() for th in threads]
         [th.join() for th in threads]
 
-        stocks_data_frame = stocks_data_frame[~stocks_data_frame.Stock.isin(companies_stock_name_list)]
+        stocks_data_frame = stocks_data_frame[~stocks_data_frame.Stock.isin(companies_in_bankruptcy_list)]
 
         return stocks_data_frame
