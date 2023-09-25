@@ -17,5 +17,5 @@ Preparing fetched data:     ---------------------------------------- 100%
 Applying financial filters: ---------------------------------------- 100%
 
 Code block 'drop stocks in bankruptcy' took: 49911.44670 ms
-Code block 'main program' took: 88921.57670 ms
+Code block 'main program' took: 71223.59940 ms
 ```

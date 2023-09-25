@@ -22,8 +22,8 @@ class WebStockFilter(WebDriver):
             self,
             companies_stock_link_list: List,
             companies_in_bankruptcy_list: List,
-            first_half_per_core: int,
-            second_half_per_core: int
+            first_half_per_thread: int,
+            second_half_per_thread: int
     ) -> List:
         r"""
         Gets `List` of local-filtered stocks and do `multiprocessing` web analysis using bankruptcy indicators
@@ -33,7 +33,7 @@ class WebStockFilter(WebDriver):
         -------
         `List` of stocks in bankruptcy
         """
-        for company_stock_link in companies_stock_link_list[first_half_per_core:second_half_per_core]:
+        for company_stock_link in companies_stock_link_list[first_half_per_thread:second_half_per_thread]:
             try:
                 self.driver.get(company_stock_link)
                 bankruptcy_situation = self.driver.find_element(By.XPATH, self.__bankruptcy_text_xpath)

@@ -24,7 +24,10 @@ class FileManagerXLSX(FileManager):
             stocks_data_frame: pd.DataFrame
     ) -> None:
         writer = pd.ExcelWriter(self.__filename, engine='xlsxwriter')
-        stocks_data_frame.to_excel(writer, sheet_name='Most_valuable_stocks', startrow=1)
+        try:
+            stocks_data_frame.to_excel(writer, sheet_name='Most_valuable_stocks', startrow=0)
+        except PermissionError as e:
+            input(f"{e} - Close the spreadsheet.")
 
         writer.close()
     # end def
