@@ -1,10 +1,14 @@
-import pandas as pd
-import pytest
+import unittest
+from unittest.mock import patch, PropertyMock
 
+import pandas as pd
+
+import settings
+from LocalStockFilter import LocalStockFilter
 from WebDriver import WebDriver
 
 
-class TestWebDriver(pytest.TestCase):
+class TestWebDriver(unittest.TestCase):
 
     def setUp(self):
         self.stock_web_driver = WebDriver()
@@ -24,21 +28,47 @@ class TestWebDriver(pytest.TestCase):
         self.assertEqual(stocks_data_frame.columns.tolist(), self.all_df_columns)
 
     def test_request_exception(self):
-        pass
+        with patch.object(WebDriver, 'url', new_callable=PropertyMock) as attr_mock:
+            with self.assertRaises(SystemExit) as cm:
+                attr_mock.return_value = 'https://invalidwebdriverlink.com'
+                WebDriver().get_stocks_table()
+            self.assertEqual(cm.exception.code, 1)
 
 
-class TestLocalStockFilter(pytest.TestCase):
+class TestLocalStockFilter(unittest.TestCase):
+    def setUp(self):
+        self.empty_stocks_list = []
+        self.empty_dataframe = pd.DataFrame()
+        self.stocks_list = pd.read_pickle(settings.PICKLE_UT_FULL_LIST_FILEPATH)
+        self.stocks_full_dataframe = pd.read_pickle(settings.PICKLE_UT_FULL_FILEPATH)
+        self.stocks_prepared_dataframe = pd.read_pickle(settings.PICKLE_UT_PREPARED_FILEPATH)
+        self.stocks_filtered_dataframe_list = pd.read_pickle(settings.PICKLE_UT_FILTERED_FILEPATH)
+        self.drop_columns_list = LocalStockFilter().drop_columns_list
+        self.renamed_columns_list = [
+            'Stock', 'Price', 'EBIT_Margin_(%)', 'EV_EBIT', 'Dividend_Yield_(%)', 'Financial_Volume_(%)'
+        ]
+
     def test_extract_dataframe(self):
-        pass
+        self.assertTrue(isinstance(LocalStockFilter().extract_dataframe(self.stocks_list), pd.DataFrame))
 
-    def test_extract_empty_dataframe(self):
-        pass
+    def test_extract_dataframe_from_empty_list(self):
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().extract_dataframe(self.empty_stocks_list)
+        self.assertEqual(cm.exception.code, 1)
 
-    def test_drop_and_rename(self):
-        pass
+    def test_drop_unused_cols(self):
+        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
+        assert all([col not in stock_data_frame.columns for col in self.drop_columns_list])
 
-    def test_drop_and_rename_empty_dataframe(self):
-        pass
+    def test_rename_cols(self):
+        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
+        assert all(col in stock_data_frame.columns for col in self.renamed_columns_list)
+
+    def test_drop_rename_cols_empty_dataframe(self):
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_drop_and_fill_nans(self):
         pass
@@ -94,8 +124,11 @@ class TestLocalStockFilter(pytest.TestCase):
     def test_drop_stocks_in_bankruptcy_empty_dataframe(self):
         pass
 
+    def test_prepared_dataframe(self):
+        pass
 
-class TestFileManagerSheet(pytest.TestCase):
+
+class TestFileManagerSheet(unittest.TestCase):
     def test_file_write(self):
         pass
 
@@ -106,7 +139,7 @@ class TestFileManagerSheet(pytest.TestCase):
         pass
 
 
-class TestWebStockFilter(pytest.TestCase):
+class TestWebStockFilter(unittest.TestCase):
     def test_request_exception_valid_link(self):
         pass
 
@@ -118,4 +151,4 @@ class TestWebStockFilter(pytest.TestCase):
 
 
 if __name__ == "__main__":
-    pytest.main()
+    unittest.main()

@@ -1,3 +1,4 @@
+import time
 import warnings
 
 import pandas as pd
@@ -18,6 +19,7 @@ def main():
             stocks_data_frame = LocalStockFilter().prepare_dataframe(stocks_list)
             stocks_data_frame = LocalStockFilter().apply_financial_filters(stocks_data_frame)
             FileManagerXLSX().store_on_disk(stocks_data_frame)
+            time.sleep(5)
         else:
             fake_stocks_data_frame = pd.DataFrame()
             LocalStockFilter().apply_financial_filters(fake_stocks_data_frame)

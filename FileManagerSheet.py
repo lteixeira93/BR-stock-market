@@ -16,14 +16,14 @@ class FileManagerXLSX(FileManager):
     def __init__(
             self
     ) -> None:
-        self.__filename = str(date.today())+settings.XLSX_FILENAME
+        self.filename = str(date.today()) + settings.XLSX_FILENAME
     # end def
 
     def store_on_disk(
             self,
             stocks_data_frame: pd.DataFrame
     ) -> None:
-        writer = pd.ExcelWriter(self.__filename, engine='xlsxwriter')
+        writer = pd.ExcelWriter(self.filename, engine='xlsxwriter')
         try:
             stocks_data_frame.to_excel(writer, sheet_name='Most_valuable_stocks', startrow=0)
         except PermissionError as e:

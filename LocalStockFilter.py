@@ -16,8 +16,8 @@ from WebStockFilter import WebStockFilter
 
 class LocalStockFilter(LocalFilter):
     def __init__(self):
-        self.__indicators_partial_url: str = 'https://www.investsite.com.br/principais_indicadores.php?cod_negociacao='
-        self.__drop_columns_list = [
+        self.indicators_partial_url: str = 'https://www.investsite.com.br/principais_indicadores.php?cod_negociacao='
+        self.drop_columns_list = [
             'Empresa', 'Data Preço', 'Data Dem.Financ.', 'Consolidação', 'ROTanC', 'ROInvC', 'RPL', 'ROA',
             'Margem Líquida', 'Margem Bruta', 'Giro Ativo', 'Alav.Financ.', 'Passivo/PL', 'Preço/Lucro', 'Preço/VPA',
             'Preço/Rec.Líq.', 'Preço/FCO', 'Preço/FCF', 'Preço/EBIT', 'Preço/NCAV', 'Preço/Ativo Total',
@@ -35,10 +35,14 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        return pd.DataFrame(stocks_list[1])
+        try:
+            return pd.DataFrame(stocks_list[1])
+        except IndexError as e:
+            print(f'Error parsing list of dataframes, list is empty or corrupted\nError message: {e}')
+            raise SystemExit(1)
     # end def
 
-    def drop_and_rename(self, stocks_data_frame: pd.DataFrame) -> pd.DataFrame:
+    def drop_and_rename_cols(self, stocks_data_frame: pd.DataFrame) -> pd.DataFrame:
         r"""
         Get `DataFrame`, drop unused columns, rename remaining columns.
 
@@ -46,11 +50,16 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        stocks_data_frame.drop(columns=self.__drop_columns_list, inplace=True)
-        stocks_data_frame.rename(columns={'Ação': 'Stock', 'Preço': 'Price', 'Margem EBIT': 'EBIT_Margin_(%)',
-                                          'EV/EBIT': 'EV_EBIT', 'Div.Yield': 'Dividend_Yield_(%)',
-                                          'Volume Financ.(R$)': 'Financial_Volume_(%)'},
-                                 inplace=True)
+        if not stocks_data_frame.empty:
+            stocks_data_frame.drop(columns=self.drop_columns_list, inplace=True)
+            stocks_data_frame.rename(columns={'Ação': 'Stock', 'Preço': 'Price', 'Margem EBIT': 'EBIT_Margin_(%)',
+                                              'EV/EBIT': 'EV_EBIT', 'Div.Yield': 'Dividend_Yield_(%)',
+                                              'Volume Financ.(R$)': 'Financial_Volume_(%)'},
+                                     inplace=True)
+        else:
+            print('Cannot drop nor rename, dataframe is empty or corrupted.')
+            raise SystemExit(1)
+
         return stocks_data_frame
     # end def
 
@@ -64,8 +73,12 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        stocks_data_frame.dropna(subset=['EBIT_Margin_(%)', 'EV_EBIT'], inplace=True)
-        stocks_data_frame.fillna(value=0, inplace=True)
+        if not stocks_data_frame.empty:
+            stocks_data_frame.dropna(subset=['EBIT_Margin_(%)', 'EV_EBIT'], inplace=True)
+            stocks_data_frame.fillna(value=0, inplace=True)
+        else:
+            print('Cannot drop nor fill, dataframe is empty or corrupted.')
+            raise SystemExit(1)
 
         return stocks_data_frame
     # end def
@@ -79,13 +92,17 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        stocks_data_frame['Price'] = stocks_data_frame['Price'].astype(str).astype(float)
-        stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].str.rstrip('%')
-        stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace('.', '')
-        stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).str.replace(',', '')
-        stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].str.rstrip('%')
-        stocks_data_frame['Dividend_Yield_(%)'] = (stocks_data_frame['Dividend_Yield_(%)'].astype(str).str
-                                                   .replace('.', ''))
+        if not stocks_data_frame.empty:
+            stocks_data_frame['Price'] = stocks_data_frame['Price'].astype(str).astype(float)
+            stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].str.rstrip('%')
+            stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace('.', '')
+            stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).str.replace(',', '')
+            stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].str.rstrip('%')
+            stocks_data_frame['Dividend_Yield_(%)'] = (stocks_data_frame['Dividend_Yield_(%)'].astype(str).str
+                                                       .replace('.', ''))
+        else:
+            print('Cannot remove invalid characters, dataframe is empty or corrupted.')
+            raise SystemExit(1)
 
         return stocks_data_frame
     # end def
@@ -99,17 +116,22 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        #
-        stocks_data_frame['EBIT_Margin_(%)'] = (stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace(',', '.')
-                                                .astype(float))
+        if not stocks_data_frame.empty:
+            stocks_data_frame['EBIT_Margin_(%)'] = (
+                stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace(',', '.')
+                .astype(float))
 
-        stocks_data_frame['Dividend_Yield_(%)'] = (stocks_data_frame['Dividend_Yield_(%)'].astype(str).str
-                                                   .replace(',', '.').astype(float))
+            stocks_data_frame['Dividend_Yield_(%)'] = (stocks_data_frame['Dividend_Yield_(%)'].astype(str).str
+                                                       .replace(',', '.').astype(float))
 
-        stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).astype(float)
+            stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).astype(float)
 
-        stocks_data_frame['Financial_Volume_(%)'] = (stocks_data_frame['Financial_Volume_(%)'].astype(str).str
-                                                     .replace('.', '').astype(float).astype(int))
+            stocks_data_frame['Financial_Volume_(%)'] = (stocks_data_frame['Financial_Volume_(%)'].astype(str).str
+                                                         .replace('.', '').astype(float).astype(int))
+        else:
+            print('Cannot convert data, dataframe is empty or corrupted.')
+            raise SystemExit(1)
+
         return stocks_data_frame
     # end def
 
@@ -123,7 +145,11 @@ class LocalStockFilter(LocalFilter):
         Pandas `DataFrame`
         """
         # Replaces NaN with 0, retain int part and convert it to integer
-        stocks_data_frame.fillna(value=0, inplace=True)
+        if not stocks_data_frame.empty:
+            stocks_data_frame.fillna(value=0, inplace=True)
+        else:
+            print('Cannot replace data, dataframe is empty or corrupted.')
+            raise SystemExit(1)
         return stocks_data_frame
     # end def
 
@@ -138,26 +164,29 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        with Progress() as progress:
-            task1 = progress.add_task("[green]Preparing fetched data:    ", total=100)
+        if stocks_list:
+            with Progress() as progress:
+                task1 = progress.add_task("[green]Preparing fetched data:    ", total=100)
 
-            while not progress.finished:
-                stocks_data_frame = self.extract_dataframe(stocks_list)
-                stocks_data_frame = self.drop_and_rename(stocks_data_frame)
-                time.sleep(0.25)
-                progress.update(task1, advance=40)
+                while not progress.finished:
+                    stocks_data_frame = self.extract_dataframe(stocks_list)
+                    stocks_data_frame = self.drop_and_rename_cols(stocks_data_frame)
+                    time.sleep(0.25)
+                    progress.update(task1, advance=40)
 
-                stocks_data_frame = self.drop_and_fill_nans(stocks_data_frame)
-                stocks_data_frame = self.remove_invalid_chars(stocks_data_frame)
-                time.sleep(0.25)
-                progress.update(task1, advance=40)
+                    stocks_data_frame = self.drop_and_fill_nans(stocks_data_frame)
+                    stocks_data_frame = self.remove_invalid_chars(stocks_data_frame)
+                    time.sleep(0.25)
+                    progress.update(task1, advance=40)
 
-                stocks_data_frame = self.convert_data_type(stocks_data_frame)
-                stocks_data_frame = self.replace_nans_by_zero(stocks_data_frame)
-                time.sleep(0.25)
-                progress.update(task1, advance=20)
-
-        return stocks_data_frame
+                    stocks_data_frame = self.convert_data_type(stocks_data_frame)
+                    stocks_data_frame = self.replace_nans_by_zero(stocks_data_frame)
+                    time.sleep(0.25)
+                    progress.update(task1, advance=20)
+                return stocks_data_frame
+        else:
+            print('Cannot parse data, list is empty or corrupted.')
+            raise SystemExit(1)
 
     def apply_financial_filters(
             self,
@@ -171,32 +200,36 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        with Progress() as progress:
-            task1 = progress.add_task("[green]Applying financial filters:", total=100)
+        if not stocks_data_frame.empty:
+            with Progress() as progress:
+                task1 = progress.add_task("[green]Applying financial filters:", total=100)
 
-            while not progress.finished:
-                if not settings.PICKLE_DATAFRAME:
-                    # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$
-                    stocks_data_frame = self.drop_low_financial_volume(stocks_data_frame, 1_000_000)
+                while not progress.finished:
+                    if not settings.PICKLE_DATAFRAME:
+                        # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$
+                        stocks_data_frame = self.drop_low_financial_volume(stocks_data_frame, 1_000_000)
 
-                    # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
-                    stocks_data_frame = self.drop_negative_profit_stocks(stocks_data_frame)
+                        # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
+                        stocks_data_frame = self.drop_negative_profit_stocks(stocks_data_frame)
+                        time.sleep(0.5)
+                        progress.update(task1, advance=40)
+
+                        # Third filter: Sort from the cheapest to expensive stocks EV_EBIT
+                        stocks_data_frame = self.sort_by_ev_ebit(stocks_data_frame)
+
+                        # Fourth filter: Remove stocks from the same company with less Financial_Volume_(%)
+                        stocks_data_frame = self.drop_duplicated_stocks_by_financial_volume(stocks_data_frame)
+                        time.sleep(0.5)
+                        progress.update(task1, advance=40)
+
+                    # Fifth filter: Remove stocks in bankruptcy
+                    stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
                     time.sleep(0.5)
-                    progress.update(task1, advance=40)
-
-                    # Third filter: Sort from the cheapest to expensive stocks EV_EBIT
-                    stocks_data_frame = self.sort_by_ev_ebit(stocks_data_frame)
-
-                    # Fourth filter: Remove stocks from the same company with less Financial_Volume_(%)
-                    stocks_data_frame = self.drop_duplicated_stocks_by_financial_volume(stocks_data_frame)
-                    time.sleep(0.5)
-                    progress.update(task1, advance=40)
-
-                # Fifth filter: Remove stocks in bankruptcy
-                stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
-                time.sleep(0.5)
-                progress.update(task1, advance=20)
-                break
+                    progress.update(task1, advance=20)
+                    break
+        else:
+            print('Cannot apply filters, dataframe is empty or corrupted.')
+            raise SystemExit(1)
 
         rich.print('[blue]Finished')
         return stocks_data_frame.head(20)
@@ -333,7 +366,7 @@ class LocalStockFilter(LocalFilter):
                 exit()
 
         companies_stock_name_list = list(stocks_data_frame['Stock'])
-        companies_stock_link_list = [self.__indicators_partial_url + stock_check_link
+        companies_stock_link_list = [self.indicators_partial_url + stock_check_link
                                      for stock_check_link in companies_stock_name_list]
 
         # Creating list of links in format:

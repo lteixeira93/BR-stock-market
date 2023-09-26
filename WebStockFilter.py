@@ -15,8 +15,8 @@ class WebStockFilter(WebDriver):
             self
     ) -> None:
         super().__init__()
-        self.__stock_bankruptcy_status: str = 'FASE OPERACIONAL'
-        self.__bankruptcy_text_xpath: str = '//*[@id="tabela_resumo_empresa"]/tbody/tr[4]/td[2]'
+        self.stock_bankruptcy_status: str = 'FASE OPERACIONAL'
+        self.bankruptcy_text_xpath: str = '//*[@id="tabela_resumo_empresa"]/tbody/tr[4]/td[2]'
 
     def check_bankruptcy(
             self,
@@ -36,11 +36,11 @@ class WebStockFilter(WebDriver):
         for company_stock_link in companies_stock_link_list[first_half_per_thread:second_half_per_thread]:
             try:
                 self.driver.get(company_stock_link)
-                bankruptcy_situation = self.driver.find_element(By.XPATH, self.__bankruptcy_text_xpath)
+                bankruptcy_situation = self.driver.find_element(By.XPATH, self.bankruptcy_text_xpath)
             except NoSuchElementException:
                 raise NoSuchElementException
             else:
-                if self.__stock_bankruptcy_status not in bankruptcy_situation.text:
+                if self.stock_bankruptcy_status not in bankruptcy_situation.text:
                     # print(f"Found {company_stock_link[-5:]} in bankruptcy to be removed "
                     #       f"from selected stocks.")
                     with lock:
