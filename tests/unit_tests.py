@@ -1,3 +1,4 @@
+import itertools
 import unittest
 from unittest.mock import patch, PropertyMock
 
@@ -71,58 +72,102 @@ class TestLocalStockFilter(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     def test_drop_and_fill_nans(self):
+        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
         pass
 
     def test_drop_and_fill_nans_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().drop_and_fill_nans(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_remove_invalid_chars(self):
-        pass
+        stock_merged_list = []
+        has_invalid_chars = False
+        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
+        stock_data_frame = LocalStockFilter().drop_and_fill_nans(stock_data_frame)
+        stock_data_frame = LocalStockFilter().remove_invalid_chars(stock_data_frame)
+
+        stock_merged_list.append(stock_data_frame['EBIT_Margin_(%)'].tolist())
+        stock_merged_list.append(stock_data_frame['Dividend_Yield_(%)'].tolist())
+        stock_merged_list = list(itertools.chain.from_iterable(stock_merged_list))
+        print(stock_merged_list)
+
+        for ch in stock_merged_list:
+            if ch == 0:
+                continue
+            elif '%' in ch or '.' in ch:
+                has_invalid_chars = True
+        self.assertFalse(has_invalid_chars)
 
     def test_remove_invalid_chars_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().remove_invalid_chars(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_convert_data_type(self):
         pass
 
     def test_convert_data_type_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().convert_data_type(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_replace_nans_by_zero(self):
         pass
 
     def test_replace_nans_by_zero_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().replace_nans_by_zero(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_drop_low_financial_volume(self):
         pass
 
     def test_drop_low_financial_volume_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_drop_negative_profit_stocks(self):
         pass
 
     def test_drop_negative_profit_stocks_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_sort_by_ev_ebit(self):
         pass
 
     def test_sort_by_ev_ebit_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_drop_duplicated_stocks_by_financial_volume(self):
         pass
 
     def test_drop_duplicated_stocks_by_financial_volume_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_drop_stocks_in_bankruptcy(self):
         pass
 
     def test_drop_stocks_in_bankruptcy_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_prepared_dataframe(self):
         pass

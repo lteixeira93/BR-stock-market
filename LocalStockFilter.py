@@ -26,6 +26,41 @@ class LocalStockFilter(LocalFilter):
         ]
     # end def
 
+    def prepare_dataframe(
+            self,
+            stocks_list: List
+    ) -> pd.DataFrame:
+        r"""
+        Get `List` of `DataFrame`, convert to `DataFrame`, remove unused fields, wipe out data to be processed.
+
+        Return
+        -------
+        Pandas `DataFrame`
+        """
+        if stocks_list:
+            with Progress() as progress:
+                task1 = progress.add_task("[green]Preparing fetched data:    ", total=100)
+
+                while not progress.finished:
+                    stocks_data_frame = self.extract_dataframe(stocks_list)
+                    stocks_data_frame = self.drop_and_rename_cols(stocks_data_frame)
+                    time.sleep(0.25)
+                    progress.update(task1, advance=40)
+
+                    stocks_data_frame = self.drop_and_fill_nans(stocks_data_frame)
+                    stocks_data_frame = self.remove_invalid_chars(stocks_data_frame)
+                    time.sleep(0.25)
+                    progress.update(task1, advance=40)
+
+                    stocks_data_frame = self.convert_data_type(stocks_data_frame)
+                    stocks_data_frame = self.replace_nans_by_zero(stocks_data_frame)
+                    time.sleep(0.25)
+                    progress.update(task1, advance=20)
+                return stocks_data_frame
+        else:
+            print('Cannot parse data, list is empty or corrupted.')
+            raise SystemExit(1)
+
     @staticmethod
     def extract_dataframe(stocks_list: List) -> pd.DataFrame:
         r"""
@@ -66,9 +101,7 @@ class LocalStockFilter(LocalFilter):
     @staticmethod
     def drop_and_fill_nans(stocks_data_frame: pd.DataFrame) -> pd.DataFrame:
         r"""
-        Get `DataFrame`, drop NaNs on EBIT_Margin_(%) and replaces NaN with 0, retain int part and convert
-        it to integer.
-
+        Get `DataFrame`, drop NaNs on EBIT_Margin_(%) and replaces NaN with 0.
         Return
         -------
         Pandas `DataFrame`
@@ -93,10 +126,9 @@ class LocalStockFilter(LocalFilter):
         Pandas `DataFrame`
         """
         if not stocks_data_frame.empty:
-            stocks_data_frame['Price'] = stocks_data_frame['Price'].astype(str).astype(float)
+            stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).str.replace(',', '')
             stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].str.rstrip('%')
             stocks_data_frame['EBIT_Margin_(%)'] = stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace('.', '')
-            stocks_data_frame['EV_EBIT'] = stocks_data_frame['EV_EBIT'].astype(str).str.replace(',', '')
             stocks_data_frame['Dividend_Yield_(%)'] = stocks_data_frame['Dividend_Yield_(%)'].str.rstrip('%')
             stocks_data_frame['Dividend_Yield_(%)'] = (stocks_data_frame['Dividend_Yield_(%)'].astype(str).str
                                                        .replace('.', ''))
@@ -117,6 +149,7 @@ class LocalStockFilter(LocalFilter):
         Pandas `DataFrame`
         """
         if not stocks_data_frame.empty:
+            stocks_data_frame['Price'] = stocks_data_frame['Price'].astype(str).astype(float)
             stocks_data_frame['EBIT_Margin_(%)'] = (
                 stocks_data_frame['EBIT_Margin_(%)'].astype(str).str.replace(',', '.')
                 .astype(float))
@@ -152,41 +185,6 @@ class LocalStockFilter(LocalFilter):
             raise SystemExit(1)
         return stocks_data_frame
     # end def
-
-    def prepare_dataframe(
-            self,
-            stocks_list: List
-    ) -> pd.DataFrame:
-        r"""
-        Get `List` of `DataFrame`, convert to `DataFrame`, remove unused fields, wipe out data to be processed.
-
-        Return
-        -------
-        Pandas `DataFrame`
-        """
-        if stocks_list:
-            with Progress() as progress:
-                task1 = progress.add_task("[green]Preparing fetched data:    ", total=100)
-
-                while not progress.finished:
-                    stocks_data_frame = self.extract_dataframe(stocks_list)
-                    stocks_data_frame = self.drop_and_rename_cols(stocks_data_frame)
-                    time.sleep(0.25)
-                    progress.update(task1, advance=40)
-
-                    stocks_data_frame = self.drop_and_fill_nans(stocks_data_frame)
-                    stocks_data_frame = self.remove_invalid_chars(stocks_data_frame)
-                    time.sleep(0.25)
-                    progress.update(task1, advance=40)
-
-                    stocks_data_frame = self.convert_data_type(stocks_data_frame)
-                    stocks_data_frame = self.replace_nans_by_zero(stocks_data_frame)
-                    time.sleep(0.25)
-                    progress.update(task1, advance=20)
-                return stocks_data_frame
-        else:
-            print('Cannot parse data, list is empty or corrupted.')
-            raise SystemExit(1)
 
     def apply_financial_filters(
             self,
