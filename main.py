@@ -21,8 +21,8 @@ def main():
             FileManagerXLSX().store_on_disk(stocks_data_frame)
             time.sleep(5)
         else:
-            fake_stocks_data_frame = pd.DataFrame()
-            LocalStockFilter().apply_financial_filters(fake_stocks_data_frame)
+            empty_stocks_data_frame = pd.DataFrame()
+            LocalStockFilter().apply_financial_filters(empty_stocks_data_frame)
 # end def
 
 

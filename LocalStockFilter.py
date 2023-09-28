@@ -15,6 +15,8 @@ from WebStockFilter import WebStockFilter
 
 
 class LocalStockFilter(LocalFilter):
+    companies_in_bankruptcy_list = []
+
     def __init__(self):
         self.indicators_partial_url: str = 'https://www.investsite.com.br/principais_indicadores.php?cod_negociacao='
         self.drop_columns_list = [
@@ -198,14 +200,14 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        if not stocks_data_frame.empty:
+        if not stocks_data_frame.empty or settings.PICKLE_DATAFRAME:
             with Progress() as progress:
                 task1 = progress.add_task("[green]Applying financial filters:", total=100)
 
                 while not progress.finished:
                     if not settings.PICKLE_DATAFRAME:
                         # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$
-                        stocks_data_frame = self.drop_low_financial_volume(stocks_data_frame, 1_000_000)
+                        stocks_data_frame = self.drop_low_financial_volume(stocks_data_frame)
 
                         # Second filter: Drop companies with negative or zero profit EBIT_Margin_(%)
                         stocks_data_frame = self.drop_negative_profit_stocks(stocks_data_frame)
@@ -235,7 +237,7 @@ class LocalStockFilter(LocalFilter):
     @staticmethod
     def drop_low_financial_volume(
             stocks_data_frame: pd.DataFrame,
-            financial_volume=0
+            financial_volume=1_000_000
     ) -> pd.DataFrame:
         r"""
         Gets `stocks_data_frame` and drop all Financial_Volume_(%) less than financial_volume.
@@ -244,9 +246,14 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        stocks_data_frame.sort_values(by=['Financial_Volume_(%)'], inplace=True)
-        stocks_data_frame.drop(stocks_data_frame[stocks_data_frame['Financial_Volume_(%)'] < financial_volume].index,
-                               inplace=True)
+        if financial_volume > 0:
+            stocks_data_frame.sort_values(by=['Financial_Volume_(%)'], inplace=True)
+            stocks_data_frame.drop(
+                stocks_data_frame[stocks_data_frame['Financial_Volume_(%)'] < financial_volume].index,
+                inplace=True)
+        else:
+            print('Cannot drop negative financial volume.')
+            raise SystemExit(1)
 
         return stocks_data_frame
 
@@ -356,7 +363,7 @@ class LocalStockFilter(LocalFilter):
             exit()
 
         if settings.PICKLE_DATAFRAME:
-            # Reads from picle to speed up loading dataframe.
+            # Reads from picle to speed up tests loading dataframe.
             if os.path.exists(settings.PICKLE_FILEPATH):
                 stocks_data_frame = pd.read_pickle(settings.PICKLE_FILEPATH)
             else:
@@ -370,39 +377,40 @@ class LocalStockFilter(LocalFilter):
         # Creating list of links in format:
         # <INDICATORS_LINK> + <STOCK_NAME>
         number_of_threads = 4
+
         if settings.DEBUG_THREADS:
             print(f"Initializing analysis with {number_of_threads} cores, each core with "
                   f"{int(len(companies_stock_link_list) / number_of_threads)} tasks")
         threads = []
         next_first_half_chunk = 0
-        companies_in_bankruptcy_list = []
 
-        # Sharing data between processes that can be serialized.
-        for current_thread in range(1, number_of_threads + 1):
-            # Dividing companies_stock_link_list for each current_thread to optimize requests
-            first_half_per_thread = next_first_half_chunk
-            second_half_per_thread = int(len(companies_stock_link_list) * current_thread / number_of_threads)
-            next_first_half_chunk = second_half_per_thread + 1
+        if not settings.UNIT_TEST:
+            # Sharing data between processes that can be serialized.
+            for current_thread in range(1, number_of_threads + 1):
+                # Dividing companies_stock_link_list for each current_thread to optimize requests
+                first_half_per_thread = next_first_half_chunk
+                second_half_per_thread = int(len(companies_stock_link_list) * current_thread / number_of_threads)
+                next_first_half_chunk = second_half_per_thread + 1
 
-            if settings.DEBUG_THREADS:
-                print(f"Core {current_thread} processing from {first_half_per_thread} to {second_half_per_thread}")
+                if settings.DEBUG_THREADS:
+                    print(f"Core {current_thread} processing from {first_half_per_thread} to {second_half_per_thread}")
 
-            threads.append(
-                threading.Thread(
-                    target=WebStockFilter().check_bankruptcy,
-                    kwargs={
-                        'companies_stock_link_list': companies_stock_link_list,
-                        'companies_in_bankruptcy_list': companies_in_bankruptcy_list,
-                        'first_half_per_thread': first_half_per_thread,
-                        'second_half_per_thread': second_half_per_thread
-                    },
-                    daemon=True
-                ),
-            )
+                threads.append(
+                    threading.Thread(
+                        target=WebStockFilter().check_bankruptcy,
+                        kwargs={
+                            'companies_stock_link_list': companies_stock_link_list,
+                            'companies_in_bankruptcy_list': self.companies_in_bankruptcy_list,
+                            'first_half_per_thread': first_half_per_thread,
+                            'second_half_per_thread': second_half_per_thread
+                        },
+                        daemon=True
+                    ),
+                )
 
-        [th.start() for th in threads]
-        [th.join() for th in threads]
+            [th.start() for th in threads]
+            [th.join() for th in threads]
 
-        stocks_data_frame = stocks_data_frame[~stocks_data_frame.Stock.isin(companies_in_bankruptcy_list)]
+        stocks_data_frame = stocks_data_frame[~stocks_data_frame.Stock.isin(self.companies_in_bankruptcy_list)]
 
         return stocks_data_frame
