@@ -7,6 +7,9 @@ PICKLE_DATAFRAME = False
 global STORE_PICLE
 STORE_PICLE = False
 
+global UNIT_TEST
+UNIT_TEST = False
+
 global DEBUG_THREADS
 DEBUG_THREADS = False
 
@@ -26,4 +29,4 @@ global PICKLE_UT_FILTERED_FILEPATH
 PICKLE_UT_FILTERED_FILEPATH = 'static_data/pickle_ut_filtered_dataframe.pkl'
 
 global XLSX_FILENAME
-XLSX_FILENAME = '-most_valuables_BR_stocks.xlsx'
+XLSX_FILENAME = '-most_valuable_stocks.xlsx'

@@ -1,12 +1,18 @@
 import itertools
+import os.path
+import tempfile
 import unittest
+from collections import Counter
+from datetime import date
 from unittest.mock import patch, PropertyMock
 
 import pandas as pd
 
 import settings
+from FileManagerSheet import FileManagerXLSX
 from LocalStockFilter import LocalStockFilter
 from WebDriver import WebDriver
+from WebStockFilter import WebStockFilter
 
 
 class TestWebDriver(unittest.TestCase):
@@ -29,6 +35,7 @@ class TestWebDriver(unittest.TestCase):
         self.assertEqual(stocks_data_frame.columns.tolist(), self.all_df_columns)
 
     def test_request_exception(self):
+        # Mocking attribute within the class
         with patch.object(WebDriver, 'url', new_callable=PropertyMock) as attr_mock:
             with self.assertRaises(SystemExit) as cm:
                 attr_mock.return_value = 'https://invalidwebdriverlink.com'
@@ -71,10 +78,6 @@ class TestLocalStockFilter(unittest.TestCase):
             LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
         self.assertEqual(cm.exception.code, 1)
 
-    def test_drop_and_fill_nans(self):
-        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
-        pass
-
     def test_drop_and_fill_nans_empty_dataframe(self):
         # The test will automatically fail if no exception / exception other than SystemExit is raised.
         with self.assertRaises(SystemExit) as cm:
@@ -87,17 +90,16 @@ class TestLocalStockFilter(unittest.TestCase):
         stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
         stock_data_frame = LocalStockFilter().drop_and_fill_nans(stock_data_frame)
         stock_data_frame = LocalStockFilter().remove_invalid_chars(stock_data_frame)
-
         stock_merged_list.append(stock_data_frame['EBIT_Margin_(%)'].tolist())
         stock_merged_list.append(stock_data_frame['Dividend_Yield_(%)'].tolist())
         stock_merged_list = list(itertools.chain.from_iterable(stock_merged_list))
-        print(stock_merged_list)
 
         for ch in stock_merged_list:
             if ch == 0:
-                continue
+                pass
             elif '%' in ch or '.' in ch:
                 has_invalid_chars = True
+
         self.assertFalse(has_invalid_chars)
 
     def test_remove_invalid_chars_empty_dataframe(self):
@@ -107,16 +109,25 @@ class TestLocalStockFilter(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     def test_convert_data_type(self):
-        pass
+        expected_types_list = ['object', 'float64', 'float64', 'float64', 'float64', 'int32']
+        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
+        stock_data_frame = LocalStockFilter().drop_and_fill_nans(stock_data_frame)
+        stock_data_frame = LocalStockFilter().remove_invalid_chars(stock_data_frame)
+        stock_data_frame = LocalStockFilter().convert_data_type(stock_data_frame)
+
+        stock_data_frame_types_list = []
+        dtypes_list = stock_data_frame.dtypes.tolist()
+
+        for idx, _ in enumerate(dtypes_list):
+            stock_data_frame_types_list.append(str(dtypes_list[idx]))
+
+        self.assertCountEqual(expected_types_list, stock_data_frame_types_list)
 
     def test_convert_data_type_empty_dataframe(self):
         # The test will automatically fail if no exception / exception other than SystemExit is raised.
         with self.assertRaises(SystemExit) as cm:
             LocalStockFilter().convert_data_type(self.empty_dataframe)
         self.assertEqual(cm.exception.code, 1)
-
-    def test_replace_nans_by_zero(self):
-        pass
 
     def test_replace_nans_by_zero_empty_dataframe(self):
         # The test will automatically fail if no exception / exception other than SystemExit is raised.
@@ -125,74 +136,131 @@ class TestLocalStockFilter(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     def test_drop_low_financial_volume(self):
-        pass
+        has_negative_financial_volumes = False
+        stock_data_frame = LocalStockFilter().prepare_dataframe(self.stocks_list)
+        stock_data_frame = LocalStockFilter().drop_low_financial_volume(stock_data_frame)
+        stock_financial_volume_list = stock_data_frame['Financial_Volume_(%)'].tolist()
 
-    def test_drop_low_financial_volume_empty_dataframe(self):
-        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        for fv in stock_financial_volume_list:
+            if fv < 1_000_000:
+                has_negative_financial_volumes = True
+
+        self.assertFalse(has_negative_financial_volumes)
+
+    def test_drop_low_financial_volume_negative_value(self):
         with self.assertRaises(SystemExit) as cm:
-            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
+            stock_data_frame = LocalStockFilter().prepare_dataframe(self.stocks_list)
+            LocalStockFilter().drop_low_financial_volume(stock_data_frame, financial_volume=-1)
         self.assertEqual(cm.exception.code, 1)
 
     def test_drop_negative_profit_stocks(self):
-        pass
+        has_negative_profit_stocks = False
+        stock_data_frame = LocalStockFilter().prepare_dataframe(self.stocks_list)
+        stock_data_frame = LocalStockFilter().drop_low_financial_volume(stock_data_frame)
+        stock_data_frame = LocalStockFilter().drop_negative_profit_stocks(stock_data_frame)
+        stock_financial_volume_list = stock_data_frame['EBIT_Margin_(%)'].tolist()
 
-    def test_drop_negative_profit_stocks_empty_dataframe(self):
-        # The test will automatically fail if no exception / exception other than SystemExit is raised.
-        with self.assertRaises(SystemExit) as cm:
-            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
-        self.assertEqual(cm.exception.code, 1)
+        for fv in stock_financial_volume_list:
+            if fv < 0:
+                has_negative_profit_stocks = True
 
-    def test_sort_by_ev_ebit(self):
-        pass
-
-    def test_sort_by_ev_ebit_empty_dataframe(self):
-        # The test will automatically fail if no exception / exception other than SystemExit is raised.
-        with self.assertRaises(SystemExit) as cm:
-            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
-        self.assertEqual(cm.exception.code, 1)
+        self.assertFalse(has_negative_profit_stocks)
 
     def test_drop_duplicated_stocks_by_financial_volume(self):
-        pass
+        has_duplicated_stocks_by_financial_volume = False
+        stock_data_frame = LocalStockFilter().prepare_dataframe(self.stocks_list)
+        stock_data_frame = LocalStockFilter().drop_low_financial_volume(stock_data_frame)
+        stock_data_frame = LocalStockFilter().drop_negative_profit_stocks(stock_data_frame)
+        stock_data_frame = LocalStockFilter().drop_negative_profit_stocks(stock_data_frame)
+        stock_data_frame = LocalStockFilter().drop_duplicated_stocks_by_financial_volume(stock_data_frame)
 
-    def test_drop_duplicated_stocks_by_financial_volume_empty_dataframe(self):
-        # The test will automatically fail if no exception / exception other than SystemExit is raised.
-        with self.assertRaises(SystemExit) as cm:
-            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
-        self.assertEqual(cm.exception.code, 1)
+        # Gets stock names and financial volumes to map each other
+        companies_stock_name_list = list(stock_data_frame['Stock'])
+        companies_stock_fv_list = list(stock_data_frame['Financial_Volume_(%)'])
+        companies_stock_name_largest_fv_dict = dict(map(
+            lambda i, j: (i, j), companies_stock_name_list, companies_stock_fv_list))
+
+        # Counter same companies (Same four letters in stock name) to compare the financial volume
+        companies_similar_stock_counter_dict = dict(Counter(k[:4] for k in companies_stock_name_largest_fv_dict))
+
+        for value in companies_similar_stock_counter_dict.values():
+            if value > 1:
+                has_duplicated_stocks_by_financial_volume = True
+        self.assertFalse(has_duplicated_stocks_by_financial_volume)
 
     def test_drop_stocks_in_bankruptcy(self):
-        pass
+        # Mocking attribute within the class
+        with (patch.object(LocalStockFilter, 'companies_in_bankruptcy_list', new_callable=PropertyMock)
+              as attr_mock):
+            settings.UNIT_TEST = True
+            attr_mock.return_value = ['ALSO3']
+            stock_data_frame = LocalStockFilter().drop_stocks_in_bankruptcy(self.stocks_filtered_dataframe_list)
+            print(stock_data_frame['Stock'].tolist())
 
-    def test_drop_stocks_in_bankruptcy_empty_dataframe(self):
+            self.assertFalse('ALSO3' in stock_data_frame['Stock'].tolist())
+
+    def test_prepared_dataframe_empty_list(self):
         # The test will automatically fail if no exception / exception other than SystemExit is raised.
         with self.assertRaises(SystemExit) as cm:
-            LocalStockFilter().drop_and_rename_cols(self.empty_dataframe)
+            LocalStockFilter().prepare_dataframe(self.empty_stocks_list)
         self.assertEqual(cm.exception.code, 1)
 
-    def test_prepared_dataframe(self):
-        pass
+    def test_applied_financial_filters_empty_dataframe(self):
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().apply_financial_filters(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
 
 class TestFileManagerSheet(unittest.TestCase):
-    def test_file_write(self):
-        pass
+    def setUp(self):
+        self.empty_dataframe = pd.DataFrame()
+        self.stocks_filtered_dataframe = pd.read_pickle(settings.PICKLE_UT_FILTERED_FILEPATH)
 
-    def test_file_exists(self):
-        pass
+    def test_file_write(self):
+        # Mocking attribute within the class
+        with (patch.object(FileManagerXLSX, 'filename', new_callable=PropertyMock) as attr_mock):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                print(temp_dir)
+                attr_mock.return_value = temp_dir + "\\" + str(date.today()) + settings.XLSX_FILENAME
+                print(attr_mock.return_value)
+                FileManagerXLSX().store_on_disk(self.stocks_filtered_dataframe)
+
+                self.assertTrue(os.path.exists(attr_mock.return_value))
 
     def test_file_write_empty_dataframe(self):
-        pass
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            LocalStockFilter().apply_financial_filters(self.empty_dataframe)
+        self.assertEqual(cm.exception.code, 1)
 
 
 class TestWebStockFilter(unittest.TestCase):
-    def test_request_exception_valid_link(self):
-        pass
+    def setUp(self):
+        self.empty_stocks_list = []
+        self.stocks_filtered_dataframe = pd.read_pickle(settings.PICKLE_UT_FILTERED_FILEPATH)
+        self.companies_stock_name_list = list(self.stocks_filtered_dataframe['Stock'])
+        self.companies_stock_link_list = [
+            LocalStockFilter().indicators_partial_url
+            + stock_check_link
+            for stock_check_link in self.companies_stock_name_list
+        ]
+        self.companies_stock_invalid_link_list = [
+            LocalStockFilter().indicators_partial_url
+            + stock_check_link + 'INVALID'
+            for stock_check_link in self.companies_stock_name_list
+        ]
 
-    def test_request_exception_non_valid_link(self):
-        pass
-
-    def test_request_exception_blank_link(self):
-        pass
+    def test_request_invalid_thread_nums_link(self):
+        # The test will automatically fail if no exception / exception other than SystemExit is raised.
+        with self.assertRaises(SystemExit) as cm:
+            WebStockFilter().check_bankruptcy(
+                self.companies_stock_link_list,
+                self.empty_stocks_list,
+                -1,
+                -1
+            )
+        self.assertEqual(cm.exception.code, 1)
 
 
 if __name__ == "__main__":
