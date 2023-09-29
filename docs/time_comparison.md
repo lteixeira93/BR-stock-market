@@ -1,4 +1,4 @@
-## Without Multiprocessing
+## Without Multiprocessing/Multithreading
 
 ```
 Getting indicators:         ---------------------------------------- 100%

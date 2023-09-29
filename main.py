@@ -5,9 +5,9 @@ import pandas as pd
 from linetimer import CodeTimer
 
 import settings
-from FileManagerSheet import FileManagerXLSX
-from LocalStockFilter import LocalStockFilter
-from WebDriver import WebDriver
+from file_manager_sheet import FileManagerXLSX
+from local_stock_filter import LocalStockFilter
+from web_driver import WebDriver
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 

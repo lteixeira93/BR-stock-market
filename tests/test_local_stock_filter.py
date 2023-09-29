@@ -1,46 +1,13 @@
+# AAA - Arrange, Act, Assert - https://docs.pytest.org/en/7.1.x/explanation/anatomy.html#test-anatomy
 import itertools
-import os.path
-import tempfile
 import unittest
 from collections import Counter
-from datetime import date
 from unittest.mock import patch, PropertyMock
 
 import pandas as pd
 
 import settings
-from FileManagerSheet import FileManagerXLSX
-from LocalStockFilter import LocalStockFilter
-from WebDriver import WebDriver
-from WebStockFilter import WebStockFilter
-
-
-class TestWebDriver(unittest.TestCase):
-
-    def setUp(self):
-        self.stock_web_driver = WebDriver()
-        self.all_df_columns = ['Ação', 'Empresa', 'Preço', 'Data Preço', 'Data Dem.Financ.', 'Consolidação', 'ROTanC',
-                               'ROInvC', 'RPL', 'ROA', 'Margem Líquida', 'Margem Bruta', 'Margem EBIT', 'Giro Ativo',
-                               'Alav.Financ.', 'Passivo/PL', 'Preço/Lucro', 'Preço/VPA', 'Preço/Rec.Líq.', 'Preço/FCO',
-                               'Preço/FCF', 'Preço/EBIT', 'Preço/NCAV', 'Preço/Ativo Total', 'Preço/Cap.Giro',
-                               'EV/EBIT', 'EV/EBITDA', 'EV/Rec.Líq.', 'EV/FCO', 'EV/FCF', 'EV/Ativo Total',
-                               'Div.Yield', 'Volume Financ.(R$)', 'Market Cap(R$)', '# Ações Total', '# Ações Ord.',
-                               '# Ações Pref.']
-
-    def test_stocks_table_has_all_columns(self):
-        stocks_list = self.stock_web_driver.get_stocks_table()
-        stocks_data_frame = pd.DataFrame(stocks_list[1])
-
-        # Assertions for modified DataFrame
-        self.assertEqual(stocks_data_frame.columns.tolist(), self.all_df_columns)
-
-    def test_request_exception(self):
-        # Mocking attribute within the class
-        with patch.object(WebDriver, 'url', new_callable=PropertyMock) as attr_mock:
-            with self.assertRaises(SystemExit) as cm:
-                attr_mock.return_value = 'https://invalidwebdriverlink.com'
-                WebDriver().get_stocks_table()
-            self.assertEqual(cm.exception.code, 1)
+from local_stock_filter import LocalStockFilter
 
 
 class TestLocalStockFilter(unittest.TestCase):
@@ -209,57 +176,6 @@ class TestLocalStockFilter(unittest.TestCase):
         # The test will automatically fail if no exception / exception other than SystemExit is raised.
         with self.assertRaises(SystemExit) as cm:
             LocalStockFilter().apply_financial_filters(self.empty_dataframe)
-        self.assertEqual(cm.exception.code, 1)
-
-
-class TestFileManagerSheet(unittest.TestCase):
-    def setUp(self):
-        self.empty_dataframe = pd.DataFrame()
-        self.stocks_filtered_dataframe = pd.read_pickle(settings.PICKLE_UT_FILTERED_FILEPATH)
-
-    def test_file_write(self):
-        # Mocking attribute within the class
-        with (patch.object(FileManagerXLSX, 'filename', new_callable=PropertyMock) as attr_mock):
-            with tempfile.TemporaryDirectory() as temp_dir:
-                print(temp_dir)
-                attr_mock.return_value = temp_dir + "\\" + str(date.today()) + settings.XLSX_FILENAME
-                print(attr_mock.return_value)
-                FileManagerXLSX().store_on_disk(self.stocks_filtered_dataframe)
-
-                self.assertTrue(os.path.exists(attr_mock.return_value))
-
-    def test_file_write_empty_dataframe(self):
-        # The test will automatically fail if no exception / exception other than SystemExit is raised.
-        with self.assertRaises(SystemExit) as cm:
-            LocalStockFilter().apply_financial_filters(self.empty_dataframe)
-        self.assertEqual(cm.exception.code, 1)
-
-
-class TestWebStockFilter(unittest.TestCase):
-    def setUp(self):
-        self.empty_stocks_list = []
-        self.stocks_filtered_dataframe = pd.read_pickle(settings.PICKLE_UT_FILTERED_FILEPATH)
-        self.companies_stock_name_list = list(self.stocks_filtered_dataframe['Stock'])
-        self.companies_stock_link_list = [
-            LocalStockFilter().indicators_partial_url
-            + stock_check_link
-            for stock_check_link in self.companies_stock_name_list
-        ]
-        self.companies_stock_invalid_link_list = [
-            LocalStockFilter().indicators_partial_url
-            + stock_check_link + 'INVALID'
-            for stock_check_link in self.companies_stock_name_list
-        ]
-
-    def test_request_invalid_thread_nums_link(self):
-        # The test will automatically fail if no exception / exception other than SystemExit is raised.
-        with self.assertRaises(SystemExit) as cm:
-            WebStockFilter().check_bankruptcy(
-                self.companies_stock_link_list,
-                self.empty_stocks_list,
-                -1,
-                -1
-            )
         self.assertEqual(cm.exception.code, 1)
 
 
