@@ -4,7 +4,7 @@ from typing import List
 from selenium.common import InvalidArgumentException
 from selenium.webdriver.common.by import By
 
-from WebDriver import WebDriver
+from web_driver import WebDriver
 
 # Creating lock to avoid race condition on shared resource
 lock = threading.RLock()

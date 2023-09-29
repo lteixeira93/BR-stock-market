@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 
 import settings
-from FileManager import FileManager
+from file_manager import FileManager
 
 
 class FileManagerXLSX(FileManager):

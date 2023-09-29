@@ -10,8 +10,8 @@ import rich
 from rich.progress import Progress
 
 import settings
-from LocalFilter import LocalFilter
-from WebStockFilter import WebStockFilter
+from local_filter import LocalFilter
+from web_stock_filter import WebStockFilter
 
 
 class LocalStockFilter(LocalFilter):

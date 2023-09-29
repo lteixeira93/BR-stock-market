@@ -5,4 +5,4 @@ numpy~=1.25.2
 rich~=13.5.3
 linetimer~=0.1.5
 cachecontrol~=0.13.1
-mock~=5.1.0
+pytest~=7.4.2
