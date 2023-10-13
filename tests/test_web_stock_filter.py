@@ -4,8 +4,8 @@ import unittest
 import pandas as pd
 
 import settings
-from local_stock_filter import LocalStockFilter
 from web_stock_filter import WebStockFilter
+from utils.config_parser import get_indicators_url
 
 
 class TestWebStockFilter(unittest.TestCase):
@@ -14,12 +14,12 @@ class TestWebStockFilter(unittest.TestCase):
         self.stocks_filtered_dataframe = pd.read_pickle(settings.PICKLE_UT_FILTERED_FILEPATH)
         self.companies_stock_name_list = list(self.stocks_filtered_dataframe['Stock'])
         self.companies_stock_link_list = [
-            LocalStockFilter().indicators_partial_url
+            get_indicators_url()
             + stock_check_link
             for stock_check_link in self.companies_stock_name_list
         ]
         self.companies_stock_invalid_link_list = [
-            LocalStockFilter().indicators_partial_url
+            get_indicators_url()
             + stock_check_link + 'INVALID'
             for stock_check_link in self.companies_stock_name_list
         ]

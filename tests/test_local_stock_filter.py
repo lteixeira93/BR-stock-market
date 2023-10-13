@@ -1,4 +1,6 @@
 # AAA - Arrange, Act, Assert - https://docs.pytest.org/en/7.1.x/explanation/anatomy.html#test-anatomy
+# python -m coverage run -m pytest .\test_local_stock_filter.py
+# python -m coverage html
 import itertools
 import unittest
 from collections import Counter
@@ -19,6 +21,7 @@ class TestLocalStockFilter(unittest.TestCase):
         self.stocks_prepared_dataframe = pd.read_pickle(settings.PICKLE_UT_PREPARED_FILEPATH)
         self.stocks_filtered_dataframe_list = pd.read_pickle(settings.PICKLE_UT_FILTERED_FILEPATH)
         self.drop_columns_list = LocalStockFilter().drop_columns_list
+        self.stock_data_frame_renamed = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
         self.renamed_columns_list = [
             'Stock', 'Price', 'EBIT_Margin_(%)', 'EV_EBIT', 'Dividend_Yield_(%)', 'Financial_Volume_(%)'
         ]
@@ -32,12 +35,10 @@ class TestLocalStockFilter(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     def test_drop_unused_cols(self):
-        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
-        assert all([col not in stock_data_frame.columns for col in self.drop_columns_list])
+        assert all([col not in self.stock_data_frame_renamed.columns for col in self.drop_columns_list])
 
     def test_rename_cols(self):
-        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
-        assert all(col in stock_data_frame.columns for col in self.renamed_columns_list)
+        assert all(col in self.stock_data_frame_renamed.columns for col in self.renamed_columns_list)
 
     def test_drop_rename_cols_empty_dataframe(self):
         # The test will automatically fail if no exception / exception other than SystemExit is raised.
@@ -54,8 +55,7 @@ class TestLocalStockFilter(unittest.TestCase):
     def test_remove_invalid_chars(self):
         stock_merged_list = []
         has_invalid_chars = False
-        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
-        stock_data_frame = LocalStockFilter().drop_and_fill_nans(stock_data_frame)
+        stock_data_frame = LocalStockFilter().drop_and_fill_nans(self.stock_data_frame_renamed)
         stock_data_frame = LocalStockFilter().remove_invalid_chars(stock_data_frame)
         stock_merged_list.append(stock_data_frame['EBIT_Margin_(%)'].tolist())
         stock_merged_list.append(stock_data_frame['Dividend_Yield_(%)'].tolist())
@@ -77,8 +77,7 @@ class TestLocalStockFilter(unittest.TestCase):
 
     def test_convert_data_type(self):
         expected_types_list = ['object', 'float64', 'float64', 'float64', 'float64', 'int32']
-        stock_data_frame = LocalStockFilter().drop_and_rename_cols(self.stocks_full_dataframe)
-        stock_data_frame = LocalStockFilter().drop_and_fill_nans(stock_data_frame)
+        stock_data_frame = LocalStockFilter().drop_and_fill_nans(self.stock_data_frame_renamed)
         stock_data_frame = LocalStockFilter().remove_invalid_chars(stock_data_frame)
         stock_data_frame = LocalStockFilter().convert_data_type(stock_data_frame)
 
