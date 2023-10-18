@@ -1,4 +1,5 @@
 # AAA - Arrange, Act, Assert - https://docs.pytest.org/en/7.1.x/explanation/anatomy.html#test-anatomy
+# python -m coverage run -m pytest .\test_webdriver.py ; python -m coverage html
 import unittest
 from unittest.mock import patch, PropertyMock
 
