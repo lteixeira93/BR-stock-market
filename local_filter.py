@@ -1,20 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import List
 
 import pandas as pd
 
+from dataframe_parser import DataframeParser
+
 
 class LocalFilter(ABC):
-    @staticmethod
-    @abstractmethod
-    def prepare_dataframe(
-            stocks_list: List
-    ) -> pd.DataFrame:
-        raise NotImplementedError
-
     @abstractmethod
     def apply_financial_filters(
             self,
-            stocks_data_frame: pd.DataFrame
+            dataframe_parser: DataframeParser
     ) -> pd.DataFrame:
         raise NotImplementedError

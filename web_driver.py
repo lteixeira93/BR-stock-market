@@ -12,6 +12,7 @@ from selenium.webdriver.chrome.options import Options
 
 class WebDriver:
     url: str = 'https://shorturl.at/hrGHQ'
+
     def __init__(
             self
     ) -> None:

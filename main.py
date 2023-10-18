@@ -5,6 +5,7 @@ import pandas as pd
 from linetimer import CodeTimer
 
 import settings
+from dataframe_parser import DataframeParser
 from file_manager_sheet import FileManagerXLSX
 from local_stock_filter import LocalStockFilter
 from web_driver import WebDriver
@@ -15,14 +16,20 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 def main():
     with CodeTimer("main program"):
         if not settings.PICKLE_DATAFRAME:
-            stocks_list = WebDriver().get_stocks_table()
-            stocks_data_frame = LocalStockFilter().prepare_dataframe(stocks_list)
-            stocks_data_frame = LocalStockFilter().apply_financial_filters(stocks_data_frame)
+            web_driver = WebDriver()
+            dataframe_parser = DataframeParser(web_driver)
+            local_stock_filter = LocalStockFilter()
+            stocks_data_frame = local_stock_filter.apply_financial_filters(dataframe_parser)
+
             FileManagerXLSX().store_on_disk(stocks_data_frame)
-            time.sleep(5)
+            time.sleep(2)
         else:
-            empty_stocks_data_frame = pd.DataFrame()
-            LocalStockFilter().apply_financial_filters(empty_stocks_data_frame)
+            web_driver = WebDriver()
+            dataframe_parser = DataframeParser(web_driver)
+            local_stock_filter = LocalStockFilter()
+            local_stock_filter.apply_financial_filters(dataframe_parser)
+
+
 # end def
 
 
