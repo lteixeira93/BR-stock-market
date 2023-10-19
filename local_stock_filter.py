@@ -30,15 +30,19 @@ class LocalStockFilter(LocalFilter):
         -------
         Pandas `DataFrame`
         """
-        stocks_list = dataframe_parser.web_driver.get_stocks_table()
-        stocks_data_frame = dataframe_parser.prepare_dataframe(stocks_list)
 
-        if not stocks_data_frame.empty or settings.PICKLE_DATAFRAME:
+        if not settings.USE_PICKLE_DATAFRAME:
+            stocks_list = dataframe_parser.web_driver.get_stocks_table()
+            stocks_data_frame = dataframe_parser.prepare_dataframe(stocks_list)
+        else:
+            stocks_data_frame = pd.DataFrame()
+
+        if not stocks_data_frame.empty or settings.USE_PICKLE_DATAFRAME:
             with Progress() as progress:
                 task1 = progress.add_task("[green]Applying financial filters:", total=100)
 
                 while not progress.finished:
-                    if not settings.PICKLE_DATAFRAME:
+                    if not settings.USE_PICKLE_DATAFRAME:
                         # First filter: Drop all Financial_Volume_(%) less than 1_000_000 R$
                         stocks_data_frame = self.drop_low_financial_volume(stocks_data_frame)
 
@@ -56,6 +60,7 @@ class LocalStockFilter(LocalFilter):
                         progress.update(task1, advance=40)
                     else:
                         stocks_data_frame = pd.DataFrame()
+
                     # Fifth filter: Remove stocks in bankruptcy
                     stocks_data_frame = self.drop_stocks_in_bankruptcy(stocks_data_frame)
                     time.sleep(0.5)
@@ -182,10 +187,12 @@ class LocalStockFilter(LocalFilter):
                         largest_fv_dict[key_j] = largest_fv_dict[key_i]
                         if counter > 0:
                             to_remove_keys_set.add(key_j)
+
         # Removes the smallest financial volumes repeated stocks
         stocks_data_frame.drop(pd.Index(np.where(stocks_data_frame['Stock'].isin(list(to_remove_keys_set)))[0]),
                                inplace=True)
         stocks_data_frame.reset_index(drop=True, inplace=True)
+
         return stocks_data_frame
 
     # end def
@@ -206,7 +213,7 @@ class LocalStockFilter(LocalFilter):
             stocks_data_frame.to_pickle(settings.PICKLE_FILEPATH)
             exit()
 
-        if settings.PICKLE_DATAFRAME:
+        if settings.USE_PICKLE_DATAFRAME:
             # Reads from picle to speed up tests loading dataframe.
             if os.path.exists(settings.PICKLE_FILEPATH):
                 stocks_data_frame = pd.read_pickle(settings.PICKLE_FILEPATH)

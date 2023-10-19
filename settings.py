@@ -1,8 +1,8 @@
 # Adding globals
 
 # Uses Picle dataframe (pickle_dataframe.pkl) instead of fetching from the web for tests speed up.
-global PICKLE_DATAFRAME
-PICKLE_DATAFRAME = False
+global USE_PICKLE_DATAFRAME
+USE_PICKLE_DATAFRAME = False
 
 global STORE_PICLE
 STORE_PICLE = False
