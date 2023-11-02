@@ -2,6 +2,7 @@ import threading
 from typing import List
 
 from selenium.common import InvalidArgumentException
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 
 from web_driver import WebDriver
@@ -45,12 +46,17 @@ class WebStockFilter(WebDriver):
                     print(f'{e} Cannot fetch links, list is empty or corrupted.')
                     raise InvalidArgumentException
                 else:
-                    bankruptcy_situation = self.driver.find_element(By.XPATH, self.bankruptcy_text_xpath)
-                    if self.stock_bankruptcy_status not in bankruptcy_situation.text:
-                        # print(f"Found {company_stock_link[-5:]} in bankruptcy to be removed "
-                        #       f"from selected stocks.")
-                        with lock:
-                            companies_in_bankruptcy_list.append(company_stock_link[-5:])
+                    try:
+                        bankruptcy_situation = self.driver.find_element(By.XPATH, self.bankruptcy_text_xpath)
+                    except NoSuchElementException as e:
+                        print(f'{e} Could not find XPATH, webpage is empty.')
+                        raise NoSuchElementException
+                    else:
+                        if self.stock_bankruptcy_status not in bankruptcy_situation.text:
+                            # print(f"Found {company_stock_link[-5:]} in bankruptcy to be removed "
+                            #       f"from selected stocks.")
+                            with lock:
+                                companies_in_bankruptcy_list.append(company_stock_link[-5:])
         else:
             print('Cannot fetch links, list is empty or corrupted.')
             raise SystemExit(1)
