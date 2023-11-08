@@ -35,6 +35,7 @@ class LocalStockFilter(LocalFilter):
             stocks_list = dataframe_parser.web_driver.get_stocks_table()
             stocks_data_frame = dataframe_parser.prepare_dataframe(stocks_list)
         else:
+            # Creates empty dataframe
             stocks_data_frame = pd.DataFrame()
 
         if not stocks_data_frame.empty or settings.USE_PICKLE_DATAFRAME:

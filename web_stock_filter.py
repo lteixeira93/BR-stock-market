@@ -5,6 +5,7 @@ from selenium.common import InvalidArgumentException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 
+from utils.helper import is_text_in_xpath
 from web_driver import WebDriver
 
 # Creating lock to avoid race condition on shared resource
@@ -52,7 +53,7 @@ class WebStockFilter(WebDriver):
                         print(f'{e} Could not find XPATH, webpage is empty.')
                         raise NoSuchElementException
                     else:
-                        if self.stock_bankruptcy_status not in bankruptcy_situation.text:
+                        if not is_text_in_xpath(self.stock_bankruptcy_status, bankruptcy_situation):
                             # print(f"Found {company_stock_link[-5:]} in bankruptcy to be removed "
                             #       f"from selected stocks.")
                             with lock:

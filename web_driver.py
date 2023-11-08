@@ -7,6 +7,10 @@ import requests
 from cachecontrol import CacheControl
 from cachecontrol.caches import FileCache
 from rich.progress import Progress
+from selenium.common import NoSuchElementException
+from selenium.webdriver.common.by import By
+
+from utils.helper import is_text_in_xpath
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
@@ -35,6 +39,9 @@ class WebDriver:
     def __init__(
             self
     ) -> None:
+        self.indicators_url_status: str = 'Sem registros para mostrar'
+        self.indicators_url_xpath: str = '//*[@id="tabela_selecao_acoes"]/tbody/tr/td'
+
         self.user_agent: str = ('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
                                 'Chrome/50.0.2661.75 Safari/537.36')
         self.url_request_type: str = 'XMLHttpRequest'
@@ -43,10 +50,14 @@ class WebDriver:
             'X-Requested-With': self.url_request_type,
             'Accept-Encoding': 'gzip'
         }
+
         self.chrome_options = Options()
         self.chrome_options.add_argument("--headless")
         self.chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
         self.driver = webdriver.Chrome(options=self.chrome_options)
+
+        # Reducing number of requests, using keep-alive and improving performance by using Cache
+        self.session = CacheControl(requests.Session(), cache=FileCache('.web_cache'))
 
     # end def
 
@@ -60,18 +71,15 @@ class WebDriver:
         -------
         `List` of `DataFrames`
         """
-        self.update_indicators_reference()
+        self.update_indicators_url()
 
         with Progress() as progress:
             task1 = progress.add_task("[green]Getting indicators:        ", total=100)
 
-            # Reducing number of requests, using keep-alive and improving performance by using Cache
-            session = CacheControl(requests.Session(), cache=FileCache('.web_cache'))
-
             while not progress.finished:
                 progress.update(task1, advance=20)
                 try:
-                    response = session.get(self.indicators_url, headers=self.header)
+                    response = self.session.get(self.indicators_url, headers=self.header)
                     progress.update(task1, advance=50)
                     time.sleep(0.25)
                 except requests.exceptions.RequestException as e:
@@ -84,7 +92,7 @@ class WebDriver:
         return stocks_list
 
     # end def
-    def update_indicators_reference(self) -> None:
+    def update_indicators_url(self) -> None:
         r"""
         Get indicators URL and reformat it to updated link date.
         """
@@ -101,4 +109,16 @@ class WebDriver:
             self.updated_date = str(datetime.today().date().replace(day=self.current_date.day - 1)).replace('-', '')
 
         self.indicators_url = self.indicators_url.replace(self.old_date_str, self.updated_date)
+
+        try:
+            self.driver.get(self.indicators_url)
+            webpage_text_status = self.driver.find_element(By.XPATH, self.indicators_url_xpath)
+        except NoSuchElementException as e:
+            print(f'{e} Could not find XPATH, webpage is empty.')
+            raise NoSuchElementException
+
+        # Verify if link contains registers to be shown, otherwise try previous day
+        if is_text_in_xpath(self.indicators_url_status, webpage_text_status):
+            self.update_indicators_url()
+
     # end def
