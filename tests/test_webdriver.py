@@ -45,7 +45,7 @@ class TestWebDriver(unittest.TestCase):
         # Mocking attribute within the class
         with patch.object(WebDriver, attribute='current_date', new_callable=PropertyMock) as attr_mock:
             attr_mock.return_value = datetime.today().date().replace(day=1)
-            self.web_driver_obj.update_indicators_reference()
+            self.web_driver_obj.update_indicators_url()
             print(self.web_driver_obj.updated_date)
         self.assertTrue(self.web_driver_obj.updated_date in self.web_driver_obj.indicators_url)
 
@@ -53,7 +53,7 @@ class TestWebDriver(unittest.TestCase):
         # Mocking attribute within the class
         with patch.object(WebDriver, attribute='current_date', new_callable=PropertyMock) as attr_mock:
             attr_mock.return_value = datetime.today().date()
-            self.web_driver_obj.update_indicators_reference()
+            self.web_driver_obj.update_indicators_url()
             print(self.web_driver_obj.updated_date)
         self.assertTrue(self.web_driver_obj.updated_date in self.web_driver_obj.indicators_url)
 
@@ -61,7 +61,7 @@ class TestWebDriver(unittest.TestCase):
         # Mocking attribute within the class
         with patch.object(WebDriver, attribute='current_date', new_callable=PropertyMock) as attr_mock:
             attr_mock.return_value = datetime.today().date().replace(day=1)
-            self.web_driver_obj.update_indicators_reference()
+            self.web_driver_obj.update_indicators_url()
 
         print(self.web_driver_obj.indicators_url)
         response = self.session.get(self.web_driver_obj.indicators_url, headers=self.web_driver_obj.header)
@@ -71,7 +71,7 @@ class TestWebDriver(unittest.TestCase):
         # Mocking attribute within the class
         with patch.object(WebDriver, attribute='current_date', new_callable=PropertyMock) as attr_mock:
             attr_mock.return_value = datetime.today().date()
-            self.web_driver_obj.update_indicators_reference()
+            self.web_driver_obj.update_indicators_url()
 
         print(self.web_driver_obj.indicators_url)
         response = self.session.get(self.web_driver_obj.indicators_url, headers=self.web_driver_obj.header)
