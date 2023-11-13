@@ -96,19 +96,10 @@ class WebDriver:
         r"""
         Get indicators URL and reformat it to updated link date.
         """
-        first_day_of_current_month = datetime.today().replace(day=1)
-        last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
-
-        # Day must be one day before actual date in order to have a valid and updated url.
-        # If current day is the first day of the current month, then the last day of last month is used.
-        if self.current_date.day == first_day_of_current_month.day:
-            self.updated_date = (str(datetime.today().date().replace(
-                day=last_day_of_previous_month.day,
-                month=last_day_of_previous_month.month)).replace('-', ''))
-        else:
-            self.updated_date = str(datetime.today().date().replace(day=self.current_date.day - 1)).replace('-', '')
-
+        self.current_date -= timedelta(days=1)
+        self.updated_date = str(datetime.today().date().replace(day=self.current_date.day)).replace('-', '')
         self.indicators_url = self.indicators_url.replace(self.old_date_str, self.updated_date)
+        self.old_date_str = self.updated_date
 
         try:
             self.driver.get(self.indicators_url)
